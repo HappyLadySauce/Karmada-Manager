@@ -26,6 +26,8 @@
     ]
   },
   "dependencies": {
+    "@ant-design/icons": "^6.0.0",
+    "@ant-design/plots": "^2.4.0",
     "@karmada/i18n-tool": "workspace:*",
     "@karmada/utils": "workspace:*",
     "@monaco-editor/react": "^4.6.0",
