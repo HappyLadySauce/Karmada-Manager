@@ -198,72 +198,75 @@ func GetClusterResourceStatus() (*v1.ClusterResourceStatus, error) {
 	clusterResourceStatus := &v1.ClusterResourceStatus{}
 	ctx := context.TODO()
 	karmadaClient := client.InClusterKarmadaClient()
-	// handle pp num
-	clusterPPRet, err := karmadaClient.PolicyV1alpha1().ClusterPropagationPolicies().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	
+	// 获取PropagationPolicy数量
+	ppList, err := karmadaClient.PolicyV1alpha1().PropagationPolicies("").List(ctx, metav1.ListOptions{})
+	if err == nil {
+		clusterResourceStatus.PropagationPolicyNum = len(ppList.Items)
 	}
-	clusterResourceStatus.PropagationPolicyNum += len(clusterPPRet.Items)
-
-	ppRet, err := karmadaClient.PolicyV1alpha1().PropagationPolicies("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	
+	// 获取ClusterPropagationPolicy数量
+	cppList, err := karmadaClient.PolicyV1alpha1().ClusterPropagationPolicies().List(ctx, metav1.ListOptions{})
+	if err == nil {
+		clusterResourceStatus.PropagationPolicyNum += len(cppList.Items)
 	}
-	clusterResourceStatus.PropagationPolicyNum += len(ppRet.Items)
-
-	// handle op num
-	clusterOPRet, err := karmadaClient.PolicyV1alpha1().ClusterOverridePolicies().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	
+	// 获取OverridePolicy数量
+	opList, err := karmadaClient.PolicyV1alpha1().OverridePolicies("").List(ctx, metav1.ListOptions{})
+	if err == nil {
+		clusterResourceStatus.OverridePolicyNum = len(opList.Items)
 	}
-	clusterResourceStatus.OverridePolicyNum += len(clusterOPRet.Items)
-
-	opRet, err := karmadaClient.PolicyV1alpha1().OverridePolicies("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	
+	// 获取ClusterOverridePolicy数量
+	copList, err := karmadaClient.PolicyV1alpha1().ClusterOverridePolicies().List(ctx, metav1.ListOptions{})
+	if err == nil {
+		clusterResourceStatus.OverridePolicyNum += len(copList.Items)
 	}
-	clusterResourceStatus.OverridePolicyNum += len(opRet.Items)
-
-	// handle cluster resources
-	// handler namespace num
-	kubeClient := client.InClusterClientForKarmadaAPIServer()
-	nsRet, err := kubeClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	
+	// 通过Karmada API获取多云资源统计
+	kubeClient := client.InClusterClient()
+	
+	// 获取Namespace数量
+	namespaceList, err := kubeClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err == nil {
+		clusterResourceStatus.NamespaceNum = len(namespaceList.Items)
 	}
-	clusterResourceStatus.NamespaceNum += len(nsRet.Items)
-
-	// handle workload num
-	// currently only deployment is allowed
-	deploymentRet, err := kubeClient.AppsV1().Deployments("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	
+	// 获取Deployment数量
+	deploymentList, err := kubeClient.AppsV1().Deployments("").List(ctx, metav1.ListOptions{})
+	if err == nil {
+		clusterResourceStatus.WorkloadNum += len(deploymentList.Items)
 	}
-	clusterResourceStatus.WorkloadNum += len(deploymentRet.Items)
-
-	// handle configmap & secret num
-	secretRet, err := kubeClient.CoreV1().Secrets("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	
+	// 获取StatefulSet数量
+	statefulSetList, err := kubeClient.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{})
+	if err == nil {
+		clusterResourceStatus.WorkloadNum += len(statefulSetList.Items)
 	}
-	clusterResourceStatus.ConfigNum += len(secretRet.Items)
-	cmRet, err := kubeClient.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	
+	// 获取DaemonSet数量
+	daemonSetList, err := kubeClient.AppsV1().DaemonSets("").List(ctx, metav1.ListOptions{})
+	if err == nil {
+		clusterResourceStatus.WorkloadNum += len(daemonSetList.Items)
 	}
-	clusterResourceStatus.ConfigNum += len(cmRet.Items)
-
-	// handle service & ingress num
-	svcRet, err := kubeClient.CoreV1().Services("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	
+	// 获取Service数量
+	serviceList, err := kubeClient.CoreV1().Services("").List(ctx, metav1.ListOptions{})
+	if err == nil {
+		clusterResourceStatus.ServiceNum = len(serviceList.Items)
 	}
-	clusterResourceStatus.ServiceNum += len(svcRet.Items)
-	ingressRet, err := kubeClient.NetworkingV1().Ingresses("").List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, err
+	
+	// 获取ConfigMap数量
+	configMapList, err := kubeClient.CoreV1().ConfigMaps("").List(ctx, metav1.ListOptions{})
+	if err == nil {
+		clusterResourceStatus.ConfigNum = len(configMapList.Items)
 	}
-	clusterResourceStatus.ServiceNum += len(ingressRet.Items)
-
+	
+	// 获取Secret数量
+	secretList, err := kubeClient.CoreV1().Secrets("").List(ctx, metav1.ListOptions{})
+	if err == nil {
+		clusterResourceStatus.ConfigNum += len(secretList.Items)
+	}
+	
 	return clusterResourceStatus, nil
 }

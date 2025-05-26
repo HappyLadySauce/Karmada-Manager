@@ -17,9 +17,12 @@ limitations under the License.
 package service
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
+	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/resource/service"
@@ -62,10 +65,67 @@ func handleGetServiceEvents(c *gin.Context) {
 	common.Success(c, result)
 }
 
+// handlerCreateServiceByForm 通过表单创建Service
+func handlerCreateServiceByForm(c *gin.Context) {
+	var req v1.ServiceFormRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.Fail(c, fmt.Errorf("请求参数格式错误: %v", err))
+		return
+	}
+	
+	result, err := CreateServiceByForm(&req)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	
+	common.Success(c, result)
+}
+
+// handlerUpdateService 更新Service
+func handlerUpdateService(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("service")
+	
+	var req v1.UpdateServiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.Fail(c, fmt.Errorf("请求参数格式错误: %v", err))
+		return
+	}
+	
+	req.Namespace = namespace
+	req.Name = name
+	
+	result, err := UpdateService(&req)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	
+	common.Success(c, result)
+}
+
+// handlerDeleteService 删除Service
+func handlerDeleteService(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("service")
+	
+	err := DeleteService(namespace, name)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	
+	common.Success(c, gin.H{"message": "删除成功"})
+}
+
 func init() {
 	r := router.V1()
 	r.GET("/service", handleGetServices)
 	r.GET("/service/:namespace", handleGetServices)
 	r.GET("/service/:namespace/:service", handleGetServiceDetail)
 	r.GET("/service/:namespace/:service/event", handleGetServiceEvents)
+	r.POST("/service/form", handlerCreateServiceByForm)
+	r.PUT("/service/:namespace/:service", handlerUpdateService)
+	r.DELETE("/service/:namespace/:service", handlerDeleteService)
 }

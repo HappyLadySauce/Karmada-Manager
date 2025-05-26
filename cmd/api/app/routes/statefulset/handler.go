@@ -14,12 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package deployment
+package statefulset
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
+	v1 "github.com/karmada-io/dashboard/cmd/api/app/types/api/v1"
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/resource/event"
@@ -62,10 +65,89 @@ func handleGetStatefulsetEvents(c *gin.Context) {
 	}
 	common.Success(c, result)
 }
+
+// handlerCreateStatefulSetByForm 通过表单创建StatefulSet
+func handlerCreateStatefulSetByForm(c *gin.Context) {
+	var req v1.StatefulSetFormRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.Fail(c, fmt.Errorf("请求参数格式错误: %v", err))
+		return
+	}
+	
+	result, err := CreateStatefulSetByForm(&req)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	
+	common.Success(c, result)
+}
+
+// handlerUpdateStatefulSet 更新StatefulSet
+func handlerUpdateStatefulSet(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("statefulset")
+	
+	var req v1.UpdateStatefulSetRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.Fail(c, fmt.Errorf("请求参数格式错误: %v", err))
+		return
+	}
+	
+	req.Namespace = namespace
+	req.Name = name
+	
+	result, err := UpdateStatefulSet(&req)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	
+	common.Success(c, result)
+}
+
+// handlerScaleStatefulSet 扩缩容StatefulSet
+func handlerScaleStatefulSet(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("statefulset")
+	
+	var req v1.ScaleStatefulSetRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.Fail(c, fmt.Errorf("请求参数格式错误: %v", err))
+		return
+	}
+	
+	result, err := ScaleStatefulSet(namespace, name, req.Replicas)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	
+	common.Success(c, result)
+}
+
+// handlerDeleteStatefulSet 删除StatefulSet
+func handlerDeleteStatefulSet(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("statefulset")
+	
+	err := DeleteStatefulSet(namespace, name)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	
+	common.Success(c, gin.H{"message": "删除成功"})
+}
+
 func init() {
 	r := router.V1()
 	r.GET("/statefulset", handleGetStatefulsets)
 	r.GET("/statefulset/:namespace", handleGetStatefulsets)
 	r.GET("/statefulset/:namespace/:statefulset", handleGetStatefulsetDetail)
 	r.GET("/statefulset/:namespace/:statefulset/event", handleGetStatefulsetEvents)
+	r.POST("/statefulset/form", handlerCreateStatefulSetByForm)
+	r.PUT("/statefulset/:namespace/:statefulset", handlerUpdateStatefulSet)
+	r.PUT("/statefulset/:namespace/:statefulset/scale", handlerScaleStatefulSet)
+	r.DELETE("/statefulset/:namespace/:statefulset", handlerDeleteStatefulSet)
 }

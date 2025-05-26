@@ -18,6 +18,7 @@ package deployment
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gin-gonic/gin"
 	appsv1 "k8s.io/api/apps/v1"
@@ -67,6 +68,80 @@ func handlerCreateDeployment(c *gin.Context) {
 	common.Success(c, result)
 }
 
+// handlerCreateDeploymentByForm 通过表单创建Deployment
+func handlerCreateDeploymentByForm(c *gin.Context) {
+	var req v1.DeploymentFormRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.Fail(c, fmt.Errorf("请求参数格式错误: %v", err))
+		return
+	}
+	
+	result, err := CreateDeploymentByForm(&req)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	
+	common.Success(c, result)
+}
+
+// handlerUpdateDeployment 更新Deployment
+func handlerUpdateDeployment(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("deployment")
+	
+	var req v1.UpdateDeploymentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.Fail(c, fmt.Errorf("请求参数格式错误: %v", err))
+		return
+	}
+	
+	req.Namespace = namespace
+	req.Name = name
+	
+	result, err := UpdateDeployment(&req)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	
+	common.Success(c, result)
+}
+
+// handlerScaleDeployment 扩缩容Deployment
+func handlerScaleDeployment(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("deployment")
+	
+	var req v1.ScaleDeploymentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.Fail(c, fmt.Errorf("请求参数格式错误: %v", err))
+		return
+	}
+	
+	result, err := ScaleDeployment(namespace, name, req.Replicas)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	
+	common.Success(c, result)
+}
+
+// handlerDeleteDeployment 删除Deployment
+func handlerDeleteDeployment(c *gin.Context) {
+	namespace := c.Param("namespace")
+	name := c.Param("deployment")
+	
+	err := DeleteDeployment(namespace, name)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+	
+	common.Success(c, gin.H{"message": "删除成功"})
+}
+
 func handleGetDeployments(c *gin.Context) {
 	namespace := common.ParseNamespacePathParameter(c)
 	dataSelect := common.ParseDataSelectPathParameter(c)
@@ -110,4 +185,8 @@ func init() {
 	r.GET("/deployment/:namespace/:deployment", handleGetDeploymentDetail)
 	r.GET("/deployment/:namespace/:deployment/event", handleGetDeploymentEvents)
 	r.POST("/deployment", handlerCreateDeployment)
+	r.POST("/deployment/form", handlerCreateDeploymentByForm)
+	r.PUT("/deployment/:namespace/:deployment", handlerUpdateDeployment)
+	r.PUT("/deployment/:namespace/:deployment/scale", handlerScaleDeployment)
+	r.DELETE("/deployment/:namespace/:deployment", handlerDeleteDeployment)
 }
