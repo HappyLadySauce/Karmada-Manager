@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karmada Dashboard - Services</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        .sidebar {
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            width: 240px;
+            position: fixed;
+            height: 100vh;
+            z-index: 10;
+        }
+        .main-content {
+            margin-left: 240px;
+            min-height: 100vh;
+        }
+        .nav-item {
+            padding: 12px 20px;
+            margin: 4px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .nav-item:hover {
+            background: #f1f5f9;
+        }
+        .nav-item.active {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
+        .table-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-active {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .cluster-chip {
+            background: #e0e7ff;
+            color: #4338ca;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin: 1px;
+            display: inline-block;
+        }
+        .search-box {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 10px 16px;
+            transition: all 0.2s ease;
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: white;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+        }
+        tr:hover {
+            background: #f8fafc;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="p-6 border-b border-gray-100">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-cubes text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-gray-900">Karmada</h1>
+                    <p class="text-sm text-gray-500">Dashboard</p>
+                </div>
+            </div>
+        </div>
+        
+        <nav class="py-4">
+            <div class="nav-item">
+                <i class="fas fa-tachometer-alt mr-3"></i>
+                概览
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-layer-group mr-3"></i>
+                工作负载
+            </div>
+            <div class="nav-item active">
+                <i class="fas fa-network-wired mr-3"></i>
+                服务与网络
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-cog mr-3"></i>
+                配置与存储
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-server mr-3"></i>
+                集群管理
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-route mr-3"></i>
+                策略管理
+            </div>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="bg-white border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Services</h1>
+                    <p class="text-sm text-gray-600 mt-1">管理多集群服务和网络配置</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="btn-primary">
+                        <i class="fas fa-plus mr-2"></i>创建 Service
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-6">
+            <!-- Statistics Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-lg shadow-sm border">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">总服务数</p>
+                            <p class="text-2xl font-bold text-gray-900">24</p>
+                        </div>
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-network-wired text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-sm border">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">ClusterIP</p>
+                            <p class="text-2xl font-bold text-gray-900">18</p>
+                        </div>
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-globe text-green-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-sm border">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">NodePort</p>
+                            <p class="text-2xl font-bold text-gray-900">4</p>
+                        </div>
+                        <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-door-open text-yellow-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow-sm border">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">LoadBalancer</p>
+                            <p class="text-2xl font-bold text-gray-900">2</p>
+                        </div>
+                        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-balance-scale text-purple-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search and Filters -->
+            <div class="table-card p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-4">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" placeholder="搜索服务..." 
+                                   class="search-box pl-10 pr-4 w-80">
+                        </div>
+                        <select class="search-box">
+                            <option>所有命名空间</option>
+                            <option>default</option>
+                            <option>karmada-system</option>
+                            <option>production</option>
+                            <option>staging</option>
+                        </select>
+                        <select class="search-box">
+                            <option>所有类型</option>
+                            <option>ClusterIP</option>
+                            <option>NodePort</option>
+                            <option>LoadBalancer</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-filter mr-2"></i>高级筛选
+                        </button>
+                        <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-sync-alt mr-2"></i>刷新
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Services Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">名称</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">命名空间</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">类型</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">集群IP</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">端口</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">分发状态</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">集群分布</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">创建时间</th>
+                                <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr class="cursor-pointer">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-network-wired text-blue-500 mr-3"></i>
+                                        <div>
+                                            <p class="font-medium text-gray-900">nginx-service</p>
+                                            <p class="text-sm text-gray-500">Web服务</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">default</td>
+                                <td class="px-6 py-4">
+                                    <span class="status-badge bg-blue-100 text-blue-800">ClusterIP</span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">10.96.45.123</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">80:8080/TCP</td>
+                                <td class="px-6 py-4">
+                                    <span class="status-badge status-active">已同步</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-1">
+                                        <span class="cluster-chip">cluster-1</span>
+                                        <span class="cluster-chip">cluster-2</span>
+                                        <span class="cluster-chip">cluster-3</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-500">2024-01-15 14:30</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-2">
+                                        <button class="text-blue-600 hover:text-blue-800 text-sm">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="text-green-600 hover:text-green-800 text-sm">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-600 hover:text-red-800 text-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="cursor-pointer">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-door-open text-yellow-500 mr-3"></i>
+                                        <div>
+                                            <p class="font-medium text-gray-900">api-gateway</p>
+                                            <p class="text-sm text-gray-500">API网关服务</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">production</td>
+                                <td class="px-6 py-4">
+                                    <span class="status-badge bg-yellow-100 text-yellow-800">NodePort</span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">10.96.32.45</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">80:30080/TCP</td>
+                                <td class="px-6 py-4">
+                                    <span class="status-badge status-active">已同步</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-1">
+                                        <span class="cluster-chip">prod-1</span>
+                                        <span class="cluster-chip">prod-2</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-500">2024-01-14 10:15</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-2">
+                                        <button class="text-blue-600 hover:text-blue-800 text-sm">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="text-green-600 hover:text-green-800 text-sm">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-600 hover:text-red-800 text-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="cursor-pointer">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-balance-scale text-purple-500 mr-3"></i>
+                                        <div>
+                                            <p class="font-medium text-gray-900">load-balancer</p>
+                                            <p class="text-sm text-gray-500">负载均衡器</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">production</td>
+                                <td class="px-6 py-4">
+                                    <span class="status-badge bg-purple-100 text-purple-800">LoadBalancer</span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">10.96.89.156</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">443:8443/TCP</td>
+                                <td class="px-6 py-4">
+                                    <span class="status-badge status-pending">同步中</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-1">
+                                        <span class="cluster-chip">prod-1</span>
+                                        <span class="cluster-chip">prod-2</span>
+                                        <span class="cluster-chip">prod-3</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-500">2024-01-13 16:45</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-2">
+                                        <button class="text-blue-600 hover:text-blue-800 text-sm">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="text-green-600 hover:text-green-800 text-sm">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-600 hover:text-red-800 text-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="cursor-pointer">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-database text-green-500 mr-3"></i>
+                                        <div>
+                                            <p class="font-medium text-gray-900">mysql-service</p>
+                                            <p class="text-sm text-gray-500">数据库服务</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">database</td>
+                                <td class="px-6 py-4">
+                                    <span class="status-badge bg-blue-100 text-blue-800">ClusterIP</span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">10.96.12.34</td>
+                                <td class="px-6 py-4 text-sm text-gray-900">3306:3306/TCP</td>
+                                <td class="px-6 py-4">
+                                    <span class="status-badge status-active">已同步</span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex flex-wrap gap-1">
+                                        <span class="cluster-chip">db-cluster-1</span>
+                                        <span class="cluster-chip">db-cluster-2</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-500">2024-01-12 09:20</td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center space-x-2">
+                                        <button class="text-blue-600 hover:text-blue-800 text-sm">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="text-green-600 hover:text-green-800 text-sm">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="text-red-600 hover:text-red-800 text-sm">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
+                    <div class="text-sm text-gray-500">
+                        显示 1-4 共 24 条记录
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50" disabled>
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="px-3 py-2 bg-blue-600 text-white rounded-lg">1</button>
+                        <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">2</button>
+                        <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">3</button>
+                        <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

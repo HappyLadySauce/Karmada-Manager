@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karmada Dashboard - Deployments</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        .metric-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            border: 1px solid #e2e8f0;
+        }
+        .metric-card:hover {
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        .sidebar {
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            width: 240px;
+            position: fixed;
+            height: 100vh;
+            z-index: 10;
+        }
+        .main-content {
+            margin-left: 240px;
+            min-height: 100vh;
+        }
+        .nav-item {
+            padding: 12px 20px;
+            margin: 4px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .nav-item:hover {
+            background: #f1f5f9;
+        }
+        .nav-item.active {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-running {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .status-failed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .table-row {
+            transition: all 0.2s ease;
+        }
+        .table-row:hover {
+            background: #f9fafb;
+        }
+        .cluster-chip {
+            display: inline-block;
+            padding: 2px 8px;
+            margin: 2px;
+            background: #e0e7ff;
+            color: #4338ca;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .create-button {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            transition: all 0.3s ease;
+        }
+        .create-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="p-6 border-b border-gray-100">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <i class="fas fa-cubes text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-gray-900">Karmada</h1>
+                    <p class="text-sm text-gray-500">Dashboard</p>
+                </div>
+            </div>
+        </div>
+        
+        <nav class="py-4">
+            <div class="nav-item">
+                <i class="fas fa-tachometer-alt mr-3"></i>
+                概览
+            </div>
+            <div class="nav-item active">
+                <i class="fas fa-layer-group mr-3"></i>
+                工作负载
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-network-wired mr-3"></i>
+                服务与网络
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-cog mr-3"></i>
+                配置与存储
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-server mr-3"></i>
+                集群管理
+            </div>
+            <div class="nav-item">
+                <i class="fas fa-route mr-3"></i>
+                策略管理
+            </div>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <header class="bg-white border-b border-gray-200 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <nav class="text-sm text-gray-600 mb-2">
+                        <span>工作负载</span> <i class="fas fa-chevron-right mx-2"></i> <span class="text-blue-600">Deployments</span>
+                    </nav>
+                    <h1 class="text-2xl font-bold text-gray-900">Deployments</h1>
+                    <p class="text-sm text-gray-600 mt-1">管理您的无状态应用部署</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                        <i class="fas fa-download mr-2"></i>导出
+                    </button>
+                    <button class="create-button px-6 py-2 text-white rounded-lg">
+                        <i class="fas fa-plus mr-2"></i>创建 Deployment
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="p-6">
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="metric-card p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">总数</p>
+                            <p class="text-2xl font-bold text-gray-900 mt-1">24</p>
+                        </div>
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-layer-group text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="metric-card p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">运行中</p>
+                            <p class="text-2xl font-bold text-green-600 mt-1">20</p>
+                        </div>
+                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-check-circle text-green-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="metric-card p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">更新中</p>
+                            <p class="text-2xl font-bold text-yellow-600 mt-1">3</p>
+                        </div>
+                        <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-sync-alt text-yellow-600"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="metric-card p-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-600">异常</p>
+                            <p class="text-2xl font-bold text-red-600 mt-1">1</p>
+                        </div>
+                        <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-red-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 搜索和筛选 -->
+            <div class="metric-card p-6 mb-6">
+                <div class="flex flex-col lg:flex-row lg:items-center space-y-4 lg:space-y-0 lg:space-x-4">
+                    <div class="flex-1">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                            <input type="text" placeholder="搜索 Deployment 名称、标签..." class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <select class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option>所有命名空间</option>
+                            <option>default</option>
+                            <option>production</option>
+                            <option>staging</option>
+                        </select>
+                        <select class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option>所有状态</option>
+                            <option>运行中</option>
+                            <option>更新中</option>
+                            <option>异常</option>
+                        </select>
+                        <button class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors">
+                            <i class="fas fa-filter mr-2"></i>高级筛选
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deployments 列表 -->
+            <div class="metric-card">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left py-4 px-6 font-medium text-gray-600">
+                                    <input type="checkbox" class="rounded border-gray-300">
+                                </th>
+                                <th class="text-left py-4 px-6 font-medium text-gray-600">名称</th>
+                                <th class="text-left py-4 px-6 font-medium text-gray-600">命名空间</th>
+                                <th class="text-left py-4 px-6 font-medium text-gray-600">状态</th>
+                                <th class="text-left py-4 px-6 font-medium text-gray-600">副本数</th>
+                                <th class="text-left py-4 px-6 font-medium text-gray-600">分发集群</th>
+                                <th class="text-left py-4 px-6 font-medium text-gray-600">创建时间</th>
+                                <th class="text-left py-4 px-6 font-medium text-gray-600">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="table-row border-b border-gray-100">
+                                <td class="py-4 px-6">
+                                    <input type="checkbox" class="rounded border-gray-300">
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-cube text-blue-600"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-900">nginx-app</p>
+                                            <p class="text-sm text-gray-500">nginx:1.21</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm">production</span>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <span class="status-badge status-running">运行中</span>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-green-600 font-medium">3</span>
+                                        <span class="text-gray-400">/</span>
+                                        <span class="text-gray-600">3</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex flex-wrap">
+                                        <span class="cluster-chip">us-west-1</span>
+                                        <span class="cluster-chip">eu-central-1</span>
+                                        <span class="cluster-chip">ap-southeast-1</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6 text-sm text-gray-600">
+                                    2024-01-15 14:30
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-2">
+                                        <button class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr class="table-row border-b border-gray-100">
+                                <td class="py-4 px-6">
+                                    <input type="checkbox" class="rounded border-gray-300">
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-cube text-green-600"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-900">api-gateway</p>
+                                            <p class="text-sm text-gray-500">gateway:v2.1.0</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm">production</span>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <span class="status-badge status-running">运行中</span>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-green-600 font-medium">2</span>
+                                        <span class="text-gray-400">/</span>
+                                        <span class="text-gray-600">2</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex flex-wrap">
+                                        <span class="cluster-chip">us-west-1</span>
+                                        <span class="cluster-chip">us-east-1</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6 text-sm text-gray-600">
+                                    2024-01-15 10:15
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-2">
+                                        <button class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr class="table-row border-b border-gray-100">
+                                <td class="py-4 px-6">
+                                    <input type="checkbox" class="rounded border-gray-300">
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-cube text-yellow-600"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-900">user-service</p>
+                                            <p class="text-sm text-gray-500">user-api:v1.5.2</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm">default</span>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <span class="status-badge status-pending">更新中</span>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-yellow-600 font-medium">2</span>
+                                        <span class="text-gray-400">/</span>
+                                        <span class="text-gray-600">3</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex flex-wrap">
+                                        <span class="cluster-chip">us-west-1</span>
+                                        <span class="cluster-chip">ap-southeast-1</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6 text-sm text-gray-600">
+                                    2024-01-14 16:45
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-2">
+                                        <button class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <tr class="table-row border-b border-gray-100">
+                                <td class="py-4 px-6">
+                                    <input type="checkbox" class="rounded border-gray-300">
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center">
+                                        <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                                            <i class="fas fa-cube text-red-600"></i>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-gray-900">data-processor</p>
+                                            <p class="text-sm text-gray-500">processor:v3.2.1</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm">staging</span>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <span class="status-badge status-failed">失败</span>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-red-600 font-medium">0</span>
+                                        <span class="text-gray-400">/</span>
+                                        <span class="text-gray-600">2</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex flex-wrap">
+                                        <span class="cluster-chip">eu-central-1</span>
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6 text-sm text-gray-600">
+                                    2024-01-14 09:20
+                                </td>
+                                <td class="py-4 px-6">
+                                    <div class="flex items-center space-x-2">
+                                        <button class="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button class="p-2 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- 分页 -->
+                <div class="px-6 py-4 border-t border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <div class="text-sm text-gray-600">
+                            显示 1-4 项，共 24 项
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button class="px-3 py-2 bg-blue-600 text-white rounded-lg">1</button>
+                            <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">2</button>
+                            <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">3</button>
+                            <button class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

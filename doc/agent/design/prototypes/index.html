@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Karmada-Dashboard 高保真原型 - 界面概览</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+        .prototype-frame {
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+            transform: translateY(0);
+            transition: all 0.3s ease;
+        }
+        .prototype-frame:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+        }
+        .section-title {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .prototype-iframe {
+            border: none;
+            width: 100%;
+            height: 800px;
+            display: block;
+        }
+        .browser-chrome {
+            background: #f5f5f5;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .browser-dots {
+            display: flex;
+            gap: 6px;
+        }
+        .browser-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        .browser-dot.red { background: #ff5f57; }
+        .browser-dot.yellow { background: #ffbd2e; }
+        .browser-dot.green { background: #28ca42; }
+        .browser-url {
+            background: white;
+            border: 1px solid #d0d0d0;
+            border-radius: 6px;
+            padding: 4px 12px;
+            margin-left: 16px;
+            flex: 1;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Header -->
+    <div class="bg-white/10 backdrop-blur-md border-b border-white/20">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-cubes text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Karmada-Dashboard</h1>
+                        <p class="text-white/80 text-sm">高保真交互设计原型</p>
+                    </div>
+                </div>
+                <div class="text-white/80 text-sm">
+                    <i class="fas fa-calendar mr-2"></i>
+                    基于 PRD v1.0 和用户故事地图
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-6 py-8">
+        <!-- 项目说明 -->
+        <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 mb-8 border border-white/20">
+            <h2 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-info-circle mr-2"></i>原型说明
+            </h2>
+            <div class="grid md:grid-cols-2 gap-6 text-white/90">
+                <div>
+                    <h3 class="font-semibold mb-2">技术栈</h3>
+                    <ul class="text-sm space-y-1">
+                        <li><i class="fab fa-html5 mr-2 text-orange-400"></i>HTML5 + Tailwind CSS</li>
+                        <li><i class="fab fa-font-awesome mr-2 text-blue-400"></i>FontAwesome 图标库</li>
+                        <li><i class="fas fa-images mr-2 text-green-400"></i>Unsplash 高质量图片</li>
+                        <li><i class="fas fa-mobile-alt mr-2 text-purple-400"></i>响应式设计</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2">设计特点</h3>
+                    <ul class="text-sm space-y-1">
+                        <li><i class="fas fa-palette mr-2 text-pink-400"></i>现代化视觉风格</li>
+                        <li><i class="fas fa-chart-line mr-2 text-indigo-400"></i>强化数据可视化</li>
+                        <li><i class="fas fa-globe mr-2 text-teal-400"></i>Web端浏览器模拟</li>
+                        <li><i class="fas fa-magic mr-2 text-yellow-400"></i>平滑过渡动效</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 核心界面原型 -->
+        <div class="space-y-12">
+            <!-- 概览页面 -->
+            <section>
+                <h2 class="section-title text-3xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-tachometer-alt mr-3"></i>
+                    概览页面 (Overview Dashboard)
+                </h2>
+                <p class="text-white/80 mb-6">展示Karmada控制面状态、成员集群汇总、资源使用情况和关键事件</p>
+                <div class="prototype-frame">
+                    <div class="browser-chrome">
+                        <div class="browser-dots">
+                            <div class="browser-dot red"></div>
+                            <div class="browser-dot yellow"></div>
+                            <div class="browser-dot green"></div>
+                        </div>
+                        <div class="browser-url">https://karmada-dashboard.example.com/overview</div>
+                    </div>
+                    <iframe src="overview.html" class="prototype-iframe"></iframe>
+                </div>
+            </section>
+
+            <!-- 资源管理 - Deployments -->
+            <section>
+                <h2 class="section-title text-3xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-layer-group mr-3"></i>
+                    Deployments 管理
+                </h2>
+                <p class="text-white/80 mb-6">工作负载部署管理，支持表单创建和YAML编辑</p>
+                
+                <!-- Deployments 列表页 -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-white mb-4">Deployments 列表页</h3>
+                    <div class="prototype-frame">
+                        <div class="browser-chrome">
+                            <div class="browser-dots">
+                                <div class="browser-dot red"></div>
+                                <div class="browser-dot yellow"></div>
+                                <div class="browser-dot green"></div>
+                            </div>
+                            <div class="browser-url">https://karmada-dashboard.example.com/workloads/deployments</div>
+                        </div>
+                        <iframe src="deployments-list.html" class="prototype-iframe"></iframe>
+                    </div>
+                </div>
+
+                <!-- Deployment 创建页 -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-white mb-4">创建 Deployment (表单模式)</h3>
+                    <div class="prototype-frame">
+                        <div class="browser-chrome">
+                            <div class="browser-dots">
+                                <div class="browser-dot red"></div>
+                                <div class="browser-dot yellow"></div>
+                                <div class="browser-dot green"></div>
+                            </div>
+                            <div class="browser-url">https://karmada-dashboard.example.com/workloads/deployments/create</div>
+                        </div>
+                        <iframe src="deployment-create.html" class="prototype-iframe"></iframe>
+                    </div>
+                </div>
+
+                <!-- Deployment 详情页 -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-white mb-4">Deployment 详情页</h3>
+                    <div class="prototype-frame">
+                        <div class="browser-chrome">
+                            <div class="browser-dots">
+                                <div class="browser-dot red"></div>
+                                <div class="browser-dot yellow"></div>
+                                <div class="browser-dot green"></div>
+                            </div>
+                            <div class="browser-url">https://karmada-dashboard.example.com/workloads/deployments/nginx-app</div>
+                        </div>
+                        <iframe src="deployment-detail.html" class="prototype-iframe"></iframe>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 资源管理 - Services -->
+            <section>
+                <h2 class="section-title text-3xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-network-wired mr-3"></i>
+                    Services 管理
+                </h2>
+                <p class="text-white/80 mb-6">服务管理，配置负载均衡和服务发现</p>
+                
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-white mb-4">Services 列表页</h3>
+                    <div class="prototype-frame">
+                        <div class="browser-chrome">
+                            <div class="browser-dots">
+                                <div class="browser-dot red"></div>
+                                <div class="browser-dot yellow"></div>
+                                <div class="browser-dot green"></div>
+                            </div>
+                            <div class="browser-url">https://karmada-dashboard.example.com/networking/services</div>
+                        </div>
+                        <iframe src="services-list.html" class="prototype-iframe"></iframe>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold text-white mb-4">创建 Service</h3>
+                    <div class="prototype-frame">
+                        <div class="browser-chrome">
+                            <div class="browser-dots">
+                                <div class="browser-dot red"></div>
+                                <div class="browser-dot yellow"></div>
+                                <div class="browser-dot green"></div>
+                            </div>
+                            <div class="browser-url">https://karmada-dashboard.example.com/networking/services/create</div>
+                        </div>
+                        <iframe src="service-create.html" class="prototype-iframe"></iframe>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 可视化调度配置 -->
+            <section>
+                <h2 class="section-title text-3xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-project-diagram mr-3"></i>
+                    可视化调度配置
+                </h2>
+                <p class="text-white/80 mb-6">图形化配置PropagationPolicy的placement策略</p>
+                <div class="prototype-frame">
+                    <div class="browser-chrome">
+                        <div class="browser-dots">
+                            <div class="browser-dot red"></div>
+                            <div class="browser-dot yellow"></div>
+                            <div class="browser-dot green"></div>
+                        </div>
+                        <div class="browser-url">https://karmada-dashboard.example.com/policies/scheduling/visual-config</div>
+                    </div>
+                    <iframe src="visual-scheduling.html" class="prototype-iframe"></iframe>
+                </div>
+            </section>
+
+            <!-- 调度关系树形图 -->
+            <section>
+                <h2 class="section-title text-3xl font-bold mb-6 flex items-center">
+                    <i class="fas fa-sitemap mr-3"></i>
+                    调度关系树形图
+                </h2>
+                <p class="text-white/80 mb-6">以树形图方式展示PropagationPolicy的调度逻辑关系</p>
+                <div class="prototype-frame">
+                    <div class="browser-chrome">
+                        <div class="browser-dots">
+                            <div class="browser-dot red"></div>
+                            <div class="browser-dot yellow"></div>
+                            <div class="browser-dot green"></div>
+                        </div>
+                        <div class="browser-url">https://karmada-dashboard.example.com/policies/scheduling/tree-view</div>
+                    </div>
+                    <iframe src="scheduling-tree.html" class="prototype-iframe"></iframe>
+                </div>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-16 text-center text-white/60 text-sm">
+            <p>&copy; 2024 Karmada-Dashboard 高保真原型 | 基于 PRD v1.0 设计</p>
+            <p class="mt-2">技术栈: HTML5 + Tailwind CSS + FontAwesome + Unsplash</p>
+        </div>
+    </div>
+</body>
+</html> 
