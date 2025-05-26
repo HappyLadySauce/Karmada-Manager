@@ -1404,184 +1404,276 @@ module.exports = {
 
 ### 5.1 i18next配置
 
+基于现有项目的配置，我们使用了一套完整的国际化解决方案：
+
 ```typescript
-// utils/i18n.tsx
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import LanguageDetector from 'i18next-browser-languagedetector';
+// src/utils/i18n.tsx
+import { createInstance } from 'i18next';
+import { Icons } from '@/components/icons';
+import zhCN from 'antd/locale/zh_CN';
+import enUS from 'antd/locale/en_US';
 
-// 导入语言资源
-import zhCN from '../locales/zh-CN.json';
-import enUS from '../locales/en-US.json';
+const i18nInstance = createInstance({});
 
-i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources: {
-      'zh-CN': { translation: zhCN },
-      'en-US': { translation: enUS },
-    },
-    fallbackLng: 'zh-CN',
-    debug: process.env.NODE_ENV === 'development',
-    
-    interpolation: {
-      escapeValue: false,
-    },
-    
-    detection: {
-      order: ['localStorage', 'navigator'],
-      caches: ['localStorage'],
-    },
-  });
+export function getLang() {
+  return window.localStorage.getItem('i18next-lang') || 'en-US';
+}
 
-export default i18n;
+export async function setLang(lang: string) {
+  await i18nInstance.changeLanguage(lang);
+  window.localStorage.setItem('i18next-lang', lang);
+}
+
+interface LangConfig {
+  title: string;
+  icon: JSX.Element;
+  sidebarWidth: number;
+}
+
+export const supportedLangConfig: Record<string, LangConfig> = {
+  'en-US': {
+    title: 'English',
+    icon: <Icons.en width={20} height={20} />,
+    sidebarWidth: 330,
+  },
+  'zh-CN': {
+    title: '中文',
+    icon: <Icons.zh width={20} height={20} />,
+    sidebarWidth: 256,
+  },
+};
+
+export function getAntdLocale(lang?: string) {
+  lang = lang || getLang();
+  switch (lang) {
+    case 'zh-CN':
+      return zhCN;
+    case 'en-US':
+      return enUS;
+    default:
+      return enUS;
+  }
+}
+
+export default i18nInstance;
 ```
 
-### 5.2 语言资源结构
+### 5.2 i18n配置文件
+
+项目使用了专门的i18n配置文件来管理国际化设置：
+
+```javascript
+// i18n.config.cjs
+module.exports = {
+    // 扫描入口
+    entry: ['./src'],
+    // 排除的文件或目录
+    exclude: [
+        'node_modules/**',
+        'scripts/**',
+        'dist/**',
+        'vite.config.ts',
+        'tailwind.config.js',
+        'postcss.config.js',
+        '**/*.d.ts',
+        'utils/i18n.tsx',
+    ],
+    // 语言资源目录
+    localesDir: "./locales",
+    // 原始语言
+    originLang: "zh-CN",
+    // 目标语言，当前支持zh-CN、en-US
+    targetLangs: ["en-US"],
+    // i18n键值生成配置
+    prefixKey: '',
+    keygenAlgorithm: 'md5',
+    showOriginKey: true,
+    // i18n导入配置
+    i18nImport: "import i18nInstance from '@/utils/i18n';",
+    i18nObject: 'i18nInstance',
+    i18nMethod: 't',
+    // 翻译服务配置
+    translate: {
+        type: 'baidu',
+        appid: 'please input your appid',
+        key: 'please input your key',
+        token: '',
+    },
+};
+```
+
+### 5.3 语言资源结构
+
+项目使用MD5哈希作为键值的扁平化结构：
 
 ```json
 // locales/zh-CN.json
 {
-  "common": {
-    "name": "名称",
-    "namespace": "命名空间",
-    "status": "状态",
-    "actions": "操作",
-    "creationTime": "创建时间",
-    "edit": "编辑",
-    "delete": "删除",
-    "create": "创建",
-    "cancel": "取消",
-    "confirm": "确认",
-    "retry": "重试",
-    "basicInfo": "基本信息"
-  },
-  "workload": {
-    "deployments": "Deployment",
-    "services": "Service",
-    "createDeployment": "创建Deployment",
-    "replicas": "副本数",
-    "container": "容器",
-    "containerName": "容器名称",
-    "image": "镜像"
-  },
-  "policy": {
-    "propagation": "分发策略",
-    "override": "覆盖策略",
-    "createPropagationPolicy": "创建分发策略",
-    "policyName": "策略名称"
-  },
-  "status": {
-    "running": "运行中",
-    "pending": "等待中",
-    "failed": "失败",
-    "unknown": "未知"
-  },
-  "messages": {
-    "loadFailed": "加载失败",
-    "createSuccess": "创建成功",
-    "createFailed": "创建失败",
-    "deleteSuccess": "删除成功",
-    "deleteFailed": "删除失败"
-  },
-  "validation": {
-    "required": "此项为必填项",
-    "invalidName": "名称格式不正确"
-  },
-  "placeholders": {
-    "enterName": "请输入名称",
-    "selectNamespace": "请选择命名空间"
-  }
+  "86385379cf9cfbc2c554944f1c054a45": "概览",
+  "21a4e07b08a4efbbfe2b9d88c208836a": "资源管理",
+  "a4b28a416f0b6f3c215c51e79e517298": "命名空间",
+  "c3bc562e9ffcae6029db730fe218515c": "工作负载",
+  "4653569c7943335f62caa11e38d48aa0": "服务管理",
+  "837d8a6473195b8b5e85d58a72cb9c7e": "配置管理",
+  "8654db688fcb1f7f11f6d7ea6b208a55": "策略管理"
+}
+
+// locales/en-US.json
+{
+  "86385379cf9cfbc2c554944f1c054a45": "Overview",
+  "21a4e07b08a4efbbfe2b9d88c208836a": "Resources",
+  "a4b28a416f0b6f3c215c51e79e517298": "Namespaces",
+  "c3bc562e9ffcae6029db730fe218515c": "Workloads",
+  "4653569c7943335f62caa11e38d48aa0": "Services",
+  "837d8a6473195b8b5e85d58a72cb9c7e": "ConfigMaps & Secrets",
+  "8654db688fcb1f7f11f6d7ea6b208a55": "Policies"
 }
 ```
 
-### 5.3 自动化国际化工具
+### 5.4 自动化国际化工具 (@karmada/i18n-tool)
+
+项目包含一个完整的自动化i18n工具链：
+
+#### 5.4.1 工具安装和使用
+
+```bash
+# 安装i18n工具
+cd ui/packages/i18n-tool
+pnpm install
+
+# 初始化i18n配置
+pnpm run init
+
+# 扫描代码并生成语言文件
+pnpm run scan
+```
+
+#### 5.4.2 工具功能特性
+
+- **自动扫描**: 基于AST解析，从代码中提取中文字符
+- **代码转换**: 自动将中文字符替换为i18n函数调用
+- **键值生成**: 使用MD5算法生成唯一的键值
+- **多翻译源**: 支持百度翻译、DeepL、OpenAI等多种翻译服务
+- **批量处理**: 支持批量文件处理和翻译
+
+#### 5.4.3 翻译服务配置
+
+项目支持多种翻译服务：
 
 ```typescript
-// packages/i18n-tool/src/scan/index.ts
-import fs from 'fs';
-import path from 'path';
-import { glob } from 'glob';
-
-interface I18nKey {
+// 百度翻译配置
+interface BaiduTranslatorConfig {
+  type: 'baidu';
+  appid: string;
   key: string;
-  defaultValue: string;
-  file: string;
-  line: number;
 }
 
-class I18nScanner {
-  private keys: Map<string, I18nKey> = new Map();
-  
-  async scanFiles(pattern: string): Promise<I18nKey[]> {
-    const files = await glob(pattern);
-    
-    for (const file of files) {
-      await this.scanFile(file);
-    }
-    
-    return Array.from(this.keys.values());
-  }
-  
-  private async scanFile(filePath: string): Promise<void> {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const lines = content.split('\n');
-    
-    lines.forEach((line, index) => {
-      // 匹配 t('key') 或 t("key") 模式
-      const matches = line.matchAll(/t\(['"]([^'"]+)['"]\)/g);
-      
-      for (const match of matches) {
-        const key = match[1];
-        
-        if (!this.keys.has(key)) {
-          this.keys.set(key, {
-            key,
-            defaultValue: key, // 默认使用key作为值
-            file: filePath,
-            line: index + 1,
-          });
-        }
-      }
-    });
-  }
-  
-  generateTranslationFile(keys: I18nKey[], outputPath: string): void {
-    const translations: Record<string, any> = {};
-    
-    keys.forEach(({ key, defaultValue }) => {
-      const keyParts = key.split('.');
-      let current = translations;
-      
-      for (let i = 0; i < keyParts.length - 1; i++) {
-        const part = keyParts[i];
-        if (!current[part]) {
-          current[part] = {};
-        }
-        current = current[part];
-      }
-      
-      const finalKey = keyParts[keyParts.length - 1];
-      if (!current[finalKey]) {
-        current[finalKey] = defaultValue;
-      }
-    });
-    
-    fs.writeFileSync(
-      outputPath,
-      JSON.stringify(translations, null, 2),
-      'utf-8'
-    );
-  }
+// DeepL翻译配置
+interface DeepLTranslatorConfig {
+  type: 'deepl';
+  apiKey: string;
+  apiUrl?: string;
 }
 
-// 使用示例
-const scanner = new I18nScanner();
-scanner.scanFiles('src/**/*.{ts,tsx}').then(keys => {
-  scanner.generateTranslationFile(keys, 'locales/zh-CN.json');
-});
+// OpenAI翻译配置
+interface OpenAITranslatorConfig {
+  type: 'openai';
+  apiKey: string;
+  baseURL?: string;
+  model?: string;
+}
 ```
+
+### 5.5 组件中使用国际化
+
+#### 5.5.1 在React组件中使用
+
+```typescript
+import React from 'react';
+import i18nInstance from '@/utils/i18n';
+
+// 函数组件中使用
+export const ExampleComponent: React.FC = () => {
+  return (
+    <div>
+      <h1>{i18nInstance.t('86385379cf9cfbc2c554944f1c054a45')}</h1>
+      <p>{i18nInstance.t('21a4e07b08a4efbbfe2b9d88c208836a')}</p>
+    </div>
+  );
+};
+
+// 使用变量插值
+const message = i18nInstance.t('b13c676134d8ab066d62e9ea5bdf796c', {
+  name: 'nginx-deployment'
+}); // "要删除 nginx-deployment 调度策略么?"
+```
+
+#### 5.5.2 在Ant Design组件中使用
+
+```typescript
+import { ConfigProvider } from 'antd';
+import { getAntdLocale, getLang } from '@/utils/i18n';
+
+export const App: React.FC = () => {
+  const currentLang = getLang();
+  
+  return (
+    <ConfigProvider locale={getAntdLocale(currentLang)}>
+      <YourAppContent />
+    </ConfigProvider>
+  );
+};
+```
+
+### 5.6 语言切换功能
+
+```typescript
+// 语言选择器组件
+import { Select } from 'antd';
+import { setLang, getLang, supportedLangConfig } from '@/utils/i18n';
+
+export const LanguageSelector: React.FC = () => {
+  const currentLang = getLang();
+  
+  const handleLanguageChange = async (lang: string) => {
+    await setLang(lang);
+    window.location.reload(); // 刷新页面以应用新语言
+  };
+  
+  return (
+    <Select
+      value={currentLang}
+      onChange={handleLanguageChange}
+      style={{ width: 120 }}
+    >
+      {Object.entries(supportedLangConfig).map(([key, config]) => (
+        <Select.Option key={key} value={key}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {config.icon}
+            {config.title}
+          </span>
+        </Select.Option>
+      ))}
+    </Select>
+  );
+};
+```
+
+### 5.7 新增语言支持流程
+
+1. **更新配置文件**：在`i18n.config.cjs`中添加新的目标语言
+2. **添加语言配置**：在`supportedLangConfig`中添加新语言的配置
+3. **运行扫描工具**：执行`pnpm run scan`生成新语言的资源文件
+4. **配置翻译服务**：设置翻译API的认证信息
+5. **人工校验**：对自动翻译的内容进行人工校验和优化
+
+### 5.8 最佳实践
+
+1. **统一使用MD5键值**：确保键值的唯一性和一致性
+2. **避免硬编码文本**：所有用户可见的文本都应该通过i18n系统
+3. **使用变量插值**：对于动态内容使用模板变量
+4. **定期运行扫描**：在开发过程中定期运行i18n扫描工具
+5. **人工校验翻译**：自动翻译后进行人工校验，确保翻译质量
 
 ## 6. 代码质量保证
 

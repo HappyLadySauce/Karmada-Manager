@@ -143,6 +143,8 @@ graph LR
 | **数据可视化**   | Ant Design Charts    | 2.4.0   | 基于G2的图表库，与Ant Design集成好            |
 | **代码编辑器**   | Monaco Editor        | 0.48.0  | VS Code核心编辑器，支持YAML/JSON高亮          |
 | **国际化**       | i18next              | 23.15.2 | 功能完善的国际化框架                          |
+| **i18n工具**     | @karmada/i18n-tool   | 1.0.0   | 自动化国际化工具，支持AST解析和自动翻译        |
+| **翻译服务**     | @karmada/translators | 1.0.0   | 支持百度、DeepL、OpenAI等多种翻译服务        |
 | **样式工具**     | Tailwind CSS         | 3.4.13  | 实用优先的CSS框架                            |
 | **构建工具**     | Vite                 | 5.4.8   | 快速的前端构建工具                            |
 
@@ -414,23 +416,64 @@ SchedulingVisualizer
 
 ### 5.4 国际化模块
 
-**功能描述**: 支持多语言的自动化国际化系统
+**功能描述**: 基于AST解析的自动化国际化系统，支持多语言和自动翻译
 
 **组件架构**:
 ```typescript
 // 国际化系统架构
 I18nSystem
-├── I18nProvider               // 国际化提供者
-├── LanguageSelector          // 语言选择器
-├── TranslationService        // 翻译服务
-├── I18nTool                  // 国际化工具
-│   ├── TextScanner          // 文本扫描器
-│   ├── KeyGenerator         // 键值生成器
+├── I18nInstance              // i18next实例
+├── LanguageConfig            // 语言配置管理
+│   ├── supportedLangConfig  // 支持的语言配置
+│   ├── getLang()            // 获取当前语言
+│   ├── setLang()            // 设置语言
+│   └── getAntdLocale()      // 获取Ant Design语言包
+├── I18nTool (@karmada/i18n-tool)  // 自动化工具
+│   ├── ASTScanner           // AST扫描器
 │   ├── CodeTransformer      // 代码转换器
-│   └── TranslationAPI       // 翻译API
+│   ├── MD5KeyGenerator      // MD5键值生成器
+│   └── LocaleUpdater        // 语言文件更新器
+├── Translators (@karmada/translators) // 翻译服务
+│   ├── BaiduTranslator      // 百度翻译
+│   ├── DeepLTranslator      // DeepL翻译
+│   ├── OpenAITranslator     // OpenAI翻译
+│   └── BaseTranslator       // 翻译基类
 └── LocaleResources           // 语言资源
-    ├── zh-CN.json           // 中文资源
-    └── en-US.json           // 英文资源
+    ├── zh-CN.json           // 中文资源(MD5键值)
+    ├── en-US.json           // 英文资源(MD5键值)
+    └── glossaries.csv       // 术语表
+```
+
+**核心特性**:
+- **AST解析**: 基于Babel的AST解析，精确提取和替换中文字符
+- **MD5键值**: 使用MD5哈希生成唯一、稳定的键值
+- **多翻译源**: 支持百度、DeepL、OpenAI等多种翻译服务
+- **自动化工作流**: 扫描->转换->翻译->更新的完整自动化流程
+- **配置驱动**: 通过i18n.config.cjs统一管理所有配置
+
+**工作流程**:
+```mermaid
+graph LR
+    subgraph "开发阶段"
+        Code[源代码] --> Scanner[AST扫描器]
+        Scanner --> Extractor[中文提取]
+        Extractor --> KeyGen[MD5键值生成]
+    end
+    
+    subgraph "转换阶段"
+        KeyGen --> CodeTrans[代码转换]
+        CodeTrans --> LocaleUpdate[语言文件更新]
+    end
+    
+    subgraph "翻译阶段"
+        LocaleUpdate --> Translator[翻译服务]
+        Translator --> MultiLang[多语言文件]
+    end
+    
+    subgraph "运行时"
+        MultiLang --> I18nInstance[i18next实例]
+        I18nInstance --> UI[用户界面]
+    end
 ```
 
 ## 6. 数据流架构

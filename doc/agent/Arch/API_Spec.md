@@ -834,9 +834,140 @@ interface TypeMeta {
 }
 ```
 
-## 13. 错误处理
+## 13. 国际化相关API
 
-### 13.1 错误响应格式
+### 13.1 获取支持的语言列表
+
+- **URL**: `/i18n/languages`
+- **Method**: `GET`
+- **描述**: 获取系统支持的语言列表和配置信息
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "supportedLanguages": [
+      {
+        "code": "zh-CN",
+        "title": "中文",
+        "icon": "zh",
+        "sidebarWidth": 256
+      },
+      {
+        "code": "en-US",
+        "title": "English", 
+        "icon": "en",
+        "sidebarWidth": 330
+      }
+    ],
+    "defaultLanguage": "en-US"
+  }
+}
+```
+
+### 13.2 获取语言资源文件
+
+- **URL**: `/i18n/locales/{language}`
+- **Method**: `GET`
+- **参数**: 
+  - `language`: 语言代码，如zh-CN、en-US
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "language": "zh-CN",
+    "translations": {
+      "86385379cf9cfbc2c554944f1c054a45": "概览",
+      "21a4e07b08a4efbbfe2b9d88c208836a": "资源管理",
+      "a4b28a416f0b6f3c215c51e79e517298": "命名空间",
+      "c3bc562e9ffcae6029db730fe218515c": "工作负载"
+    },
+    "lastModified": "2024-12-19T10:00:00Z"
+  }
+}
+```
+
+### 13.3 批量翻译文本
+
+- **URL**: `/i18n/translate`
+- **Method**: `POST`
+- **描述**: 批量翻译文本内容（需要管理员权限）
+
+**请求体**:
+```json
+{
+  "texts": [
+    "概览",
+    "资源管理",
+    "工作负载"
+  ],
+  "from": "zh-CN",
+  "to": "en-US",
+  "translator": "baidu"
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "translations": [
+      {
+        "original": "概览",
+        "translated": "Overview"
+      },
+      {
+        "original": "资源管理", 
+        "translated": "Resource Management"
+      },
+      {
+        "original": "工作负载",
+        "translated": "Workloads"
+      }
+    ]
+  }
+}
+```
+
+### 13.4 更新语言资源
+
+- **URL**: `/i18n/locales/{language}`
+- **Method**: `PUT`
+- **描述**: 更新指定语言的资源文件（需要管理员权限）
+
+**请求体**:
+```json
+{
+  "translations": {
+    "86385379cf9cfbc2c554944f1c054a45": "概览",
+    "21a4e07b08a4efbbfe2b9d88c208836a": "资源管理"
+  }
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "updated": true,
+    "updatedCount": 2,
+    "lastModified": "2024-12-19T10:30:00Z"
+  }
+}
+```
+
+## 14. 错误处理
+
+### 14.1 错误响应格式
 
 ```json
 {
@@ -853,7 +984,7 @@ interface TypeMeta {
 }
 ```
 
-### 13.2 常见错误代码
+### 14.2 常见错误代码
 
 | 错误代码 | 描述 | 示例场景 |
 |---------|------|----------|
