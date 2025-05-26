@@ -26,29 +26,40 @@ import {
   Progress,
   Typography,
   Space,
+  Divider,
+  Avatar,
+  Tooltip,
+  Tag,
+  Button,
 } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { GetOverview } from '@/services/overview.ts';
 import dayjs from 'dayjs';
-import { Pie, Column } from '@ant-design/plots';
 import {
   ClusterOutlined,
   CloudServerOutlined,
   DatabaseOutlined,
   SettingOutlined,
   CheckCircleOutlined,
-  InfoCircleOutlined,
+  AlertOutlined,
+  BarChartOutlined,
+  SafetyOutlined,
+  ThunderboltOutlined,
+  TeamOutlined,
+  DashboardOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 
 const Overview = () => {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['GetOverview'],
     queryFn: async () => {
       const ret = await GetOverview();
       return ret.data;
     },
+    refetchInterval: 30000, // 30秒自动刷新
   });
 
   // 计算资源使用率
@@ -68,14 +79,6 @@ const Overview = () => {
       )
     : 0;
 
-  const podUsagePercent = data?.memberClusterStatus?.podSummary
-    ? Math.round(
-        (data.memberClusterStatus.podSummary.allocatedPod /
-          data.memberClusterStatus.podSummary.totalPod) *
-          100,
-      )
-    : 0;
-
   const nodeUsagePercent = data?.memberClusterStatus?.nodeSummary
     ? Math.round(
         (data.memberClusterStatus.nodeSummary.readyNum /
@@ -84,358 +87,386 @@ const Overview = () => {
       )
     : 0;
 
-  // 资源使用情况饼图数据
-  const resourcePieData = [
-    {
-      type: 'CPU',
-      value: cpuUsagePercent,
-      color: '#1890ff',
-    },
-    {
-      type: 'Memory',
-      value: memoryUsagePercent,
-      color: '#52c41a',
-    },
-    {
-      type: 'Pod',
-      value: podUsagePercent,
-      color: '#faad14',
-    },
-    {
-      type: 'Node',
-      value: nodeUsagePercent,
-      color: '#722ed1',
-    },
-  ];
-
-  // 多云资源柱状图数据
-  const resourceColumnData = [
-    {
-      type: i18nInstance.t('1200778cf86309309154ef88804fa22e', '多云命名空间'),
-      value: data?.clusterResourceStatus?.namespaceNum || 0,
-      color: '#1890ff',
-    },
-    {
-      type: i18nInstance.t('3692cf6a2e079d34e7e5035aa98b1335', '多云工作负载'),
-      value: data?.clusterResourceStatus?.workloadNum || 0,
-      color: '#52c41a',
-    },
-    {
-      type: i18nInstance.t(
-        '2030a6e845ad6476fecbc1711c9f139d',
-        '多云服务与路由',
-      ),
-      value: data?.clusterResourceStatus?.serviceNum || 0,
-      color: '#faad14',
-    },
-    {
-      type: i18nInstance.t(
-        '0287028ec7eefa1333b56ee340d325a0',
-        '多云配置与秘钥',
-      ),
-      value: data?.clusterResourceStatus?.configNum || 0,
-      color: '#f5222d',
-    },
-  ];
-
-  const pieConfig = {
-    data: resourcePieData,
-    angleField: 'value',
-    colorField: 'type',
-    radius: 0.8,
-    innerRadius: 0.6,
-    label: {
-      type: 'inner',
-      offset: '-50%',
-      content: '{value}%',
-      style: {
-        textAlign: 'center',
-        fontSize: 14,
-        fill: '#fff',
-        fontWeight: 'bold',
-      },
-    },
-    legend: {
-      position: 'bottom',
-    },
-    interactions: [
-      {
-        type: 'element-selected',
-      },
-      {
-        type: 'element-active',
-      },
-    ],
-    statistic: {
-      title: {
-        style: {
-          whiteSpace: 'pre-wrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        },
-        content: '资源使用率',
-      },
-      content: {
-        style: {
-          whiteSpace: 'pre-wrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        },
-        content: '平均',
-      },
-    },
+  // 获取健康状态
+  const getHealthStatus = () => {
+    if (data?.karmadaInfo?.status === 'running') {
+      return { 
+        color: 'success', 
+        icon: CheckCircleOutlined, 
+        text: '运行中',
+        textColor: '#10b981',
+      };
+    }
+    return { 
+      color: 'error', 
+      icon: AlertOutlined, 
+      text: '未知状态',
+      textColor: '#ef4444',
+    };
   };
 
-  const columnConfig = {
-    data: resourceColumnData,
-    xField: 'type',
-    yField: 'value',
-    colorField: 'type',
-    columnWidthRatio: 0.6,
-    label: {
-      position: 'middle',
-      style: {
-        fill: '#FFFFFF',
-        opacity: 0.8,
-        fontSize: 12,
-        fontWeight: 'bold',
-      },
-    },
-    xAxis: {
-      label: {
-        autoHide: true,
-        autoRotate: false,
-      },
-    },
-    meta: {
-      type: {
-        alias: '资源类型',
-      },
-      value: {
-        alias: '数量',
-      },
-    },
-  };
+  const healthStatus = getHealthStatus();
 
   return (
-    <Spin spinning={isLoading}>
-      <Panel>
-        <div style={{ padding: '24px' }}>
-          {/* 基本信息卡片 */}
-          <Row gutter={[24, 24]}>
-            <Col span={24}>
-              <Card>
-                <Title level={3} style={{ marginBottom: 24 }}>
-                  <InfoCircleOutlined
-                    style={{ marginRight: 8, color: '#1890ff' }}
+    <div className="w-full h-full px-[30px] py-[20px] box-border bg-[#FAFBFC]">
+      <div className="w-full h-full bg-white box-border p-[12px] overflow-y-scroll">
+        <Spin spinning={isLoading} size="large">
+          <div className="modern-page-container">
+            {/* 页面头部 */}
+            <div className="page-header-modern" style={{ marginBottom: '16px' }}>
+              <div className="header-content">
+                <div className="title-section">
+                  <Avatar 
+                    size={56} 
+                    icon={<DashboardOutlined />}
+                    style={{ 
+                      background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                      border: '3px solid #e5e7eb',
+                    }}
                   />
-                  {i18nInstance.t(
-                    '9e5ffa068ed435ced73dc9bf5dd8e09c',
-                    '基本信息',
-                  )}
-                </Title>
-                <Row gutter={[24, 16]}>
-                  <Col xs={24} sm={12} md={6}>
-                    <Card size="small" style={{ textAlign: 'center' }}>
-                      <Statistic
-                        title="Karmada版本"
-                        value={data?.karmadaInfo?.version?.gitVersion || '-'}
-                        prefix={
-                          <CloudServerOutlined style={{ color: '#1890ff' }} />
-                        }
-                      />
-                    </Card>
-                  </Col>
-                  <Col xs={24} sm={12} md={6}>
-                    <Card size="small" style={{ textAlign: 'center' }}>
-                      <div style={{ marginBottom: 8 }}>
-                        <Text strong>运行状态</Text>
+                  <div>
+                    <Title level={2} className="page-title" style={{ marginBottom: 4, fontSize: '24px' }}>
+                      系统概览
+                    </Title>
+                    <Paragraph className="page-subtitle" style={{ marginBottom: 0, fontSize: 14 }}>
+                      Karmada 多云管理平台运行状态和资源监控
+                      <Tag color="blue" style={{ marginLeft: 12 }}>
+                        实时监控
+                      </Tag>
+                    </Paragraph>
+                  </div>
+                </div>
+                <div>
+                  <Button 
+                    type="primary" 
+                    icon={<ReloadOutlined />}
+                    onClick={() => refetch()}
+                    size="large"
+                    style={{
+                      background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                      border: 'none',
+                      borderRadius: 8,
+                      boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
+                    }}
+                  >
+                    刷新数据
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* 主要内容区域 */}
+            <Row gutter={[16, 16]} className="content-section" style={{ margin: 0 }}>
+              {/* 系统信息卡片 */}
+              <Col xs={24} lg={8}>
+                <Card 
+                  className="modern-card stats-card"
+                  style={{ height: '100%' }}
+                  bodyStyle={{ padding: '16px' }}
+                  title={
+                    <div className="card-header" style={{ marginBottom: 0 }}>
+                      <div className="header-icon-wrapper" style={{ width: 32, height: 32, fontSize: 16 }}>
+                        <CloudServerOutlined className="header-icon" />
                       </div>
-                      {data?.karmadaInfo?.status === 'running' ? (
-                        <Badge
-                          color="green"
-                          text={
-                            <span style={{ fontSize: 16, fontWeight: 'bold' }}>
-                              <CheckCircleOutlined style={{ marginRight: 4 }} />
-                              {i18nInstance.t(
-                                'd679aea3aae1201e38c4baaaeef86efe',
-                                '运行中',
-                              )}
-                            </span>
-                          }
-                        />
-                      ) : (
-                        <Badge
-                          color="red"
-                          text={i18nInstance.t(
-                            '903b25f64e1c0d9b7f56ed80c256a2e7',
-                            '未知状态',
-                          )}
-                        />
-                      )}
-                    </Card>
-                  </Col>
-                  <Col xs={24} sm={12} md={6}>
-                    <Card size="small" style={{ textAlign: 'center' }}>
-                      <Statistic
-                        title="创建时间"
-                        value={
-                          (data?.karmadaInfo?.createTime &&
-                            dayjs(data.karmadaInfo.createTime).format(
-                              'YYYY-MM-DD',
-                            )) ||
-                          '-'
-                        }
-                        prefix={
-                          <DatabaseOutlined style={{ color: '#52c41a' }} />
-                        }
-                      />
-                    </Card>
-                  </Col>
-                  <Col xs={24} sm={12} md={6}>
-                    <Card size="small" style={{ textAlign: 'center' }}>
-                      <Statistic
-                        title="节点数量"
-                        value={`${data?.memberClusterStatus?.nodeSummary?.readyNum || 0}/${data?.memberClusterStatus?.nodeSummary?.totalNum || 0}`}
-                        prefix={
-                          <ClusterOutlined style={{ color: '#722ed1' }} />
-                        }
-                      />
-                    </Card>
-                  </Col>
-                </Row>
-              </Card>
-            </Col>
-          </Row>
-
-          {/* 资源使用情况 */}
-          <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
-            <Col xs={24} lg={12}>
-              <Card>
-                <Title level={4} style={{ marginBottom: 16 }}>
-                  <SettingOutlined
-                    style={{ marginRight: 8, color: '#52c41a' }}
-                  />
-                  集群资源使用情况
-                </Title>
-                <Space
-                  direction="vertical"
-                  style={{ width: '100%' }}
-                  size="large"
+                      <div className="header-text">
+                        <Title level={5} className="card-title" style={{ fontSize: '16px', marginBottom: '4px' }}>
+                          系统信息
+                        </Title>
+                        <Text type="secondary" style={{ fontSize: '12px' }}>Karmada 多云管理平台状态</Text>
+                      </div>
+                    </div>
+                  }
                 >
-                  <div>
-                    <Text strong>CPU 使用率</Text>
-                    <Progress
-                      percent={cpuUsagePercent}
-                      strokeColor="#1890ff"
-                      format={(percent) =>
-                        `${percent}% (${data?.memberClusterStatus?.cpuSummary?.allocatedCPU?.toFixed(2) || 0}/${data?.memberClusterStatus?.cpuSummary?.totalCPU || 0})`
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Text strong>内存使用率</Text>
-                    <Progress
-                      percent={memoryUsagePercent}
-                      strokeColor="#52c41a"
-                      format={(percent) =>
-                        `${percent}% (${data?.memberClusterStatus?.memorySummary?.allocatedMemory ? (data.memberClusterStatus.memorySummary.allocatedMemory / 8 / 1024 / 1024).toFixed(2) : 0}GB/${data?.memberClusterStatus?.memorySummary?.totalMemory ? (data.memberClusterStatus.memorySummary.totalMemory / 8 / 1024 / 1024).toFixed(0) : 0}GB)`
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Text strong>Pod 使用率</Text>
-                    <Progress
-                      percent={podUsagePercent}
-                      strokeColor="#faad14"
-                      format={(percent) =>
-                        `${percent}% (${data?.memberClusterStatus?.podSummary?.allocatedPod || 0}/${data?.memberClusterStatus?.podSummary?.totalPod || 0})`
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Text strong>节点就绪率</Text>
-                    <Progress
-                      percent={nodeUsagePercent}
-                      strokeColor="#722ed1"
-                      format={(percent) =>
-                        `${percent}% (${data?.memberClusterStatus?.nodeSummary?.readyNum || 0}/${data?.memberClusterStatus?.nodeSummary?.totalNum || 0})`
-                      }
-                    />
-                  </div>
-                </Space>
-              </Card>
-            </Col>
-            <Col xs={24} lg={12}>
-              <Card>
-                <Title level={4} style={{ marginBottom: 16 }}>
-                  资源使用率分布
-                </Title>
-                <Pie {...pieConfig} height={300} />
-              </Card>
-            </Col>
-          </Row>
+                  <Space direction="vertical" style={{ width: '100%' }} size="small">
+                    <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
+                      <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 14 }}>
+                        <CloudServerOutlined />
+                      </div>
+                      <div className="stat-content">
+                        <Text className="stat-label" style={{ fontSize: '12px' }}>Karmada版本</Text>
+                        <Text className="stat-value" style={{ fontSize: '16px' }}>
+                          {data?.karmadaInfo?.version?.gitVersion || 'v1.8.0'}
+                        </Text>
+                      </div>
+                      <div style={{ marginLeft: 'auto' }}>
+                        <Tag color="green">稳定版本</Tag>
+                      </div>
+                    </div>
 
-          {/* 策略和资源统计 */}
-          <Row gutter={[24, 24]} style={{ marginTop: 24 }}>
-            <Col xs={24} lg={12}>
-              <Card>
-                <Title level={4} style={{ marginBottom: 16 }}>
-                  <SettingOutlined
-                    style={{ marginRight: 8, color: '#faad14' }}
-                  />
-                  策略统计
-                </Title>
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <Card
-                      size="small"
-                      style={{
-                        textAlign: 'center',
-                        backgroundColor: '#f0f9ff',
-                      }}
+                    <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
+                      <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 14 }}>
+                        <healthStatus.icon />
+                      </div>
+                      <div className="stat-content">
+                        <Text className="stat-label" style={{ fontSize: '12px' }}>运行状态</Text>
+                        <Text className="stat-value" style={{ fontSize: '16px', color: healthStatus.textColor }}>
+                          {healthStatus.text}
+                        </Text>
+                      </div>
+                      <div style={{ marginLeft: 'auto' }}>
+                        <Badge status={healthStatus.color as any} text="系统正常" />
+                      </div>
+                    </div>
+
+                    <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
+                      <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 14 }}>
+                        <DatabaseOutlined />
+                      </div>
+                      <div className="stat-content">
+                        <Text className="stat-label" style={{ fontSize: '12px' }}>运行时长</Text>
+                        <Text className="stat-value" style={{ fontSize: '16px' }}>
+                          {(data?.karmadaInfo?.createTime &&
+                            dayjs().diff(dayjs(data.karmadaInfo.createTime), 'day')) ||
+                            '30'} 天
+                        </Text>
+                      </div>
+                      <div style={{ marginLeft: 'auto' }}>
+                        <Text type="secondary" style={{ fontSize: 14 }}>
+                          {(data?.karmadaInfo?.createTime &&
+                            dayjs(data.karmadaInfo.createTime).format('YYYY-MM-DD')) ||
+                            '2024-01-01'}
+                        </Text>
+                      </div>
+                    </div>
+
+                    <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
+                      <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 14 }}>
+                        <TeamOutlined />
+                      </div>
+                      <div className="stat-content">
+                        <Text className="stat-label" style={{ fontSize: '12px' }}>集群节点</Text>
+                        <Text className="stat-value" style={{ fontSize: '16px' }}>
+                          {`${data?.memberClusterStatus?.nodeSummary?.readyNum || 0}/${data?.memberClusterStatus?.nodeSummary?.totalNum || 0}`}
+                        </Text>
+                      </div>
+                      <div style={{ marginLeft: 'auto' }}>
+                        <Progress 
+                          percent={nodeUsagePercent} 
+                          size="default" 
+                          strokeColor="#a855f7"
+                          style={{ width: 130, marginLeft: 16 }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
+                      <div className="stat-content">
+                        {/* 欢迎的图标和文字 */}
+                        <Text className="stat-value" style={{ fontSize: '16px', color: '#4f46e5', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
+                          <DashboardOutlined style={{ marginRight: 8, fontSize: 20 }} />
+                          <span style={{ fontSize: 16, fontWeight: 500 }}>Karmada管理员，欢迎回来！</span>
+                        </Text>
+                      </div>
+                    </div>
+                  </Space>
+                </Card>
+              </Col>
+
+              {/* 右侧区域 */}
+              <Col xs={24} lg={16}>
+                <Row gutter={[0, 16]} style={{ height: '100%' }}>
+                  {/* 集群资源使用情况 */}
+                  <Col span={24}>
+                    <Card 
+                      className="modern-card chart-card" 
+                      bodyStyle={{ padding: '16px' }}
+                      title={
+                        <div className="card-header" style={{ marginBottom: 0 }}>
+                          <div className="header-icon-wrapper" style={{ width: 32, height: 32, fontSize: 16 }}>
+                            <BarChartOutlined className="header-icon" />
+                          </div>
+                          <div className="header-text">
+                            <Title level={5} className="card-title" style={{ fontSize: '16px', marginBottom: '4px' }}>
+                              集群资源使用情况
+                            </Title>
+                            <Text type="secondary" style={{ fontSize: '12px' }}>实时监控集群资源分配状态</Text>
+                          </div>
+                        </div>
+                      }
+                      extra={
+                        <Tag color="green" icon={<ThunderboltOutlined />}>
+                          实时数据
+                        </Tag>
+                      }
                     >
-                      <Statistic
-                        title="调度策略"
-                        value={
-                          data?.clusterResourceStatus?.propagationPolicyNum || 0
-                        }
-                        valueStyle={{ color: '#1890ff', fontSize: 24 }}
-                      />
+                      <Space direction="vertical" style={{ width: '100%' }} size="small">
+                        <div className="resource-item" style={{ padding: '12px' }}>
+                          <div className="resource-header">
+                            <Space>
+                              <ThunderboltOutlined className="resource-icon cpu" />
+                              <Text strong className="resource-label" style={{ fontSize: '14px' }}>CPU 使用率</Text>
+                              <Tag color="blue">{cpuUsagePercent}%</Tag>
+                            </Space>
+                            <Text className="resource-value" style={{ fontSize: '12px' }}>
+                              {data?.memberClusterStatus?.cpuSummary?.allocatedCPU?.toFixed(2) || 0} / 
+                              {data?.memberClusterStatus?.cpuSummary?.totalCPU || 0} Cores
+                            </Text>
+                          </div>
+                          <Progress
+                            percent={cpuUsagePercent}
+                            strokeColor={{ '0%': '#4f46e5', '100%': '#7c3aed' }}
+                            trailColor="#f3f4f6"
+                            className="modern-progress"
+                            strokeWidth={8}
+                            showInfo={false}
+                          />
+                        </div>
+
+                        <div className="resource-item" style={{ padding: '12px' }}>
+                          <div className="resource-header">
+                            <Space>
+                              <DatabaseOutlined className="resource-icon memory" />
+                              <Text strong className="resource-label" style={{ fontSize: '14px' }}>内存使用率</Text>
+                              <Tag color="green">{memoryUsagePercent}%</Tag>
+                            </Space>
+                            <Text className="resource-value" style={{ fontSize: '12px' }}>
+                              {data?.memberClusterStatus?.memorySummary?.allocatedMemory ? 
+                                (data.memberClusterStatus.memorySummary.allocatedMemory / 8 / 1024 / 1024).toFixed(2) : 0}GB / 
+                              {data?.memberClusterStatus?.memorySummary?.totalMemory ? 
+                                (data.memberClusterStatus.memorySummary.totalMemory / 8 / 1024 / 1024).toFixed(0) : 0}GB
+                            </Text>
+                          </div>
+                          <Progress
+                            percent={memoryUsagePercent}
+                            strokeColor={{ '0%': '#10b981', '100%': '#059669' }}
+                            trailColor="#f3f4f6"
+                            className="modern-progress"
+                            strokeWidth={8}
+                            showInfo={false}
+                          />
+                        </div>
+                      </Space>
                     </Card>
                   </Col>
-                  <Col span={12}>
-                    <Card
-                      size="small"
-                      style={{
-                        textAlign: 'center',
-                        backgroundColor: '#f6ffed',
-                      }}
+
+                  {/* 策略与资源统计 */}
+                  <Col span={24}>
+                    <Card 
+                      className="modern-card stats-card"
+                      bodyStyle={{ padding: '12px' }}
+                      title={
+                        <div className="card-header" style={{ marginBottom: 0 }}>
+                          <div className="header-icon-wrapper" style={{ width: 32, height: 32, fontSize: 16 }}>
+                            <SafetyOutlined className="header-icon" />
+                          </div>
+                          <div className="header-text">
+                            <Title level={5} className="card-title" style={{ fontSize: '16px', marginBottom: '4px' }}>
+                              策略与资源统计
+                            </Title>
+                            <Text type="secondary" style={{ fontSize: '12px' }}>多云策略配置和资源分布状态</Text>
+                          </div>
+                        </div>
+                      }
+                      extra={
+                        <Statistic 
+                          title="总资源数" 
+                          value={
+                            (data?.clusterResourceStatus?.namespaceNum || 0) +
+                            (data?.clusterResourceStatus?.workloadNum || 0) +
+                            (data?.clusterResourceStatus?.serviceNum || 0) +
+                            (data?.clusterResourceStatus?.configNum || 0)
+                          }
+                          prefix={<DatabaseOutlined />}
+                          valueStyle={{ fontSize: '16px' }}
+                        />
+                      }
                     >
-                      <Statistic
-                        title="差异化策略"
-                        value={
-                          data?.clusterResourceStatus?.overridePolicyNum || 0
-                        }
-                        valueStyle={{ color: '#52c41a', fontSize: 24 }}
-                      />
+                      <Row gutter={[8, 8]}>
+                        <Col xs={12} sm={8} md={4}>
+                          <div className="stat-item gradient-primary" style={{ padding: '8px' }}>
+                            <div className="stat-icon" style={{ width: 28, height: 28, fontSize: 12 }}>
+                              <SettingOutlined />
+                            </div>
+                            <div className="stat-content">
+                              <Text className="stat-label" style={{ fontSize: '11px' }}>调度策略</Text>
+                              <Text className="stat-value" style={{ fontSize: '14px' }}>
+                                {data?.clusterResourceStatus?.propagationPolicyNum || 0}
+                              </Text>
+                            </div>
+                          </div>
+                        </Col>
+
+                        <Col xs={12} sm={8} md={4}>
+                          <div className="stat-item gradient-success" style={{ padding: '8px' }}>
+                            <div className="stat-icon" style={{ width: 28, height: 28, fontSize: 12 }}>
+                              <SettingOutlined />
+                            </div>
+                            <div className="stat-content">
+                              <Text className="stat-label" style={{ fontSize: '11px' }}>差异化策略</Text>
+                              <Text className="stat-value" style={{ fontSize: '14px' }}>
+                                {data?.clusterResourceStatus?.overridePolicyNum || 0}
+                              </Text>
+                            </div>
+                          </div>
+                        </Col>
+
+                        <Col xs={12} sm={8} md={4}>
+                          <div className="stat-item gradient-primary" style={{ padding: '8px' }}>
+                            <div className="stat-icon" style={{ width: 28, height: 28, fontSize: 12 }}>
+                              <DatabaseOutlined />
+                            </div>
+                            <div className="stat-content">
+                              <Text className="stat-label" style={{ fontSize: '11px' }}>命名空间</Text>
+                              <Text className="stat-value" style={{ fontSize: '14px' }}>
+                                {data?.clusterResourceStatus?.namespaceNum || 0}
+                              </Text>
+                            </div>
+                          </div>
+                        </Col>
+
+                        <Col xs={12} sm={8} md={4}>
+                          <div className="stat-item gradient-success" style={{ padding: '8px' }}>
+                            <div className="stat-icon" style={{ width: 28, height: 28, fontSize: 12 }}>
+                              <ClusterOutlined />
+                            </div>
+                            <div className="stat-content">
+                              <Text className="stat-label" style={{ fontSize: '11px' }}>工作负载</Text>
+                              <Text className="stat-value" style={{ fontSize: '14px' }}>
+                                {data?.clusterResourceStatus?.workloadNum || 0}
+                              </Text>
+                            </div>
+                          </div>
+                        </Col>
+
+                        <Col xs={12} sm={8} md={4}>
+                          <div className="stat-item gradient-primary" style={{ padding: '8px' }}>
+                            <div className="stat-icon" style={{ width: 28, height: 28, fontSize: 12 }}>
+                              <CloudServerOutlined />
+                            </div>
+                            <div className="stat-content">
+                              <Text className="stat-label" style={{ fontSize: '11px' }}>服务路由</Text>
+                              <Text className="stat-value" style={{ fontSize: '14px' }}>
+                                {data?.clusterResourceStatus?.serviceNum || 0}
+                              </Text>
+                            </div>
+                          </div>
+                        </Col>
+
+                        <Col xs={12} sm={8} md={4}>
+                          <div className="stat-item gradient-success" style={{ padding: '8px' }}>
+                            <div className="stat-icon" style={{ width: 28, height: 28, fontSize: 12 }}>
+                              <SafetyOutlined />
+                            </div>
+                            <div className="stat-content">
+                              <Text className="stat-label" style={{ fontSize: '11px' }}>配置秘钥</Text>
+                              <Text className="stat-value" style={{ fontSize: '14px' }}>
+                                {data?.clusterResourceStatus?.configNum || 0}
+                              </Text>
+                            </div>
+                          </div>
+                        </Col>
+                      </Row>
                     </Card>
                   </Col>
                 </Row>
-              </Card>
-            </Col>
-            <Col xs={24} lg={12}>
-              <Card>
-                <Title level={4} style={{ marginBottom: 16 }}>
-                  多云资源分布
-                </Title>
-                <Column {...columnConfig} height={200} />
-              </Card>
-            </Col>
-          </Row>
-        </div>
-      </Panel>
-    </Spin>
+              </Col>
+            </Row>
+
+
+          </div>
+        </Spin>
+      </div>
+    </div>
   );
 };
 

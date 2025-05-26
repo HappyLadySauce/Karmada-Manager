@@ -15,6 +15,8 @@ limitations under the License.
 */
 
 import './App.css';
+import './styles/variables.css';
+import './styles/components.css';
 import Router from './routes';
 import { Helmet, HelmetProvider } from 'react-helmet-async';
 import { ConfigProvider, App as AntdApp } from 'antd';
