@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import i18nInstance from '@/utils/i18n';
-import Panel from '@/components/panel';
+import React from 'react';
 import {
   Badge,
   Card,
@@ -26,7 +25,6 @@ import {
   Progress,
   Typography,
   Space,
-  Divider,
   Avatar,
   Tooltip,
   Tag,
@@ -34,6 +32,7 @@ import {
 } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { GetOverview } from '@/services/overview.ts';
+import { GetClusterResources, ClusterResource } from '@/services/cluster.ts';
 import dayjs from 'dayjs';
 import {
   ClusterOutlined,
@@ -52,14 +51,373 @@ import {
 
 const { Title, Text, Paragraph } = Typography;
 
+// 集群卡片组件（增强版）
+const ClusterCard: React.FC<{ cluster: ClusterResource }> = ({ cluster }) => {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Ready': 
+      case 'True': return '#52c41a';
+      case 'NotReady': 
+      case 'False': return '#ff4d4f';
+      default: return '#faad14';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'Ready': 
+      case 'True': return '健康';
+      case 'NotReady': 
+      case 'False': return '异常';
+      default: return '警告';
+    }
+  };
+
+  const getLoadLevelColor = (level: string) => {
+    switch (level) {
+      case 'low': return '#52c41a';
+      case 'medium': return '#faad14';
+      case 'high': return '#ff4d4f';
+      default: return '#d9d9d9';
+    }
+  };
+
+  const getProviderIcon = (provider?: string) => {
+    if (!provider) return <CloudServerOutlined />;
+    switch (provider.toLowerCase()) {
+      case 'aws': return '☁️';
+      case 'azure': return '☁️';
+      case 'gcp': return '☁️';
+      case 'alicloud': return '☁️';
+      case 'tencent': return '☁️';
+      default: return <CloudServerOutlined />;
+    }
+  };
+
+  const formatJoinedTime = (joinedTime?: string) => {
+    if (!joinedTime) return '';
+    const days = dayjs().diff(dayjs(joinedTime), 'day');
+    if (days === 0) return '今天加入';
+    if (days === 1) return '昨天加入';
+    if (days < 30) return `${days}天前加入`;
+    if (days < 365) return `${Math.floor(days/30)}个月前加入`;
+    return `${Math.floor(days/365)}年前加入`;
+  };
+
+  const cpuPercent = cluster.resources.cpu.allocatable > 0 
+    ? Math.round((cluster.resources.cpu.allocated / cluster.resources.cpu.allocatable) * 100)
+    : 0;
+
+  const memoryPercent = cluster.resources.memory.allocatable > 0 
+    ? Math.round((cluster.resources.memory.allocated / cluster.resources.memory.allocatable) * 100)
+    : 0;
+
+  const clusterTooltip = (
+    <div style={{ maxWidth: 300, color: '#fff' }}>
+      <div style={{ marginBottom: 8 }}>
+        <Text strong style={{ color: '#fff' }}>{cluster.displayName || cluster.name}</Text>
+      </div>
+      {cluster.location && (
+        <div style={{ marginBottom: 4 }}>
+          <Text style={{ fontSize: 12, color: '#fff' }}>位置: {cluster.location.city}, {cluster.location.country}</Text>
+        </div>
+      )}
+      {cluster.version && (
+        <div style={{ marginBottom: 4 }}>
+          <Text style={{ fontSize: 12, color: '#fff' }}>版本: {cluster.version}</Text>
+        </div>
+      )}
+      {cluster.provider && (
+        <div style={{ marginBottom: 4 }}>
+          <Text style={{ fontSize: 12, color: '#fff' }}>提供商: {cluster.provider}</Text>
+        </div>
+      )}
+      <div style={{ marginBottom: 4 }}>
+        <Text style={{ fontSize: 12, color: '#fff' }}>
+          CPU: {cluster.resources.cpu.allocated}/{cluster.resources.cpu.allocatable} ({cpuPercent}%)
+        </Text>
+      </div>
+      <div style={{ marginBottom: 4 }}>
+        <Text style={{ fontSize: 12, color: '#fff' }}>
+          内存: {(cluster.resources.memory.allocated / 1024 / 1024 / 1024).toFixed(1)}GB/
+          {(cluster.resources.memory.allocatable / 1024 / 1024 / 1024).toFixed(1)}GB ({memoryPercent}%)
+        </Text>
+      </div>
+      <div>
+        <Text style={{ fontSize: 12, color: '#fff' }}>节点: {cluster.nodeCount} | Pod: {cluster.podCount}</Text>
+      </div>
+    </div>
+  );
+
+  return (
+    <Tooltip 
+      title={clusterTooltip} 
+      placement="top" 
+      overlayStyle={{ 
+        zIndex: 9999 
+      }}
+      overlayInnerStyle={{
+        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        borderRadius: '8px',
+        padding: '12px 16px',
+        boxShadow: '0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05)'
+      }}
+    >
+      <Card 
+        className="cluster-card"
+        style={{
+          borderRadius: 12,
+          border: `2px solid ${cluster.status === 'Ready' ? '#e5e7eb' : getStatusColor(cluster.status)}`,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          transition: 'all 0.3s ease',
+          cursor: 'pointer',
+          height: '100%'
+        }}
+        styles={{ body: { padding: '16px' } }}
+        hoverable
+      >
+      <div style={{ position: 'relative' }}>
+        {/* 状态指示器 */}
+        <div style={{ 
+          position: 'absolute', 
+          top: -8, 
+          right: -8,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8
+        }}>
+          <div style={{
+            width: 12,
+            height: 12,
+            backgroundColor: getStatusColor(cluster.status),
+            borderRadius: '50%',
+            border: '2px solid white',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          }}></div>
+        </div>
+
+        {/* 集群头部信息 */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Title level={5} style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
+                {cluster.displayName || cluster.name}
+              </Title>
+              {cluster.provider && (
+                <span style={{ fontSize: 16 }}>{getProviderIcon(cluster.provider)}</span>
+              )}
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              {cluster.location && (
+                <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>
+                  {cluster.location.city}, {cluster.location.country}
+                </Text>
+              )}
+              {cluster.region && (
+                <Text type="secondary" style={{ fontSize: 10 }}>
+                  {cluster.region}
+                </Text>
+              )}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <Text style={{ color: getStatusColor(cluster.status), fontSize: 12, fontWeight: 500 }}>
+              {getStatusText(cluster.status)}
+            </Text>
+            {cluster.zone && (
+              <Tag style={{ fontSize: 10 }}>
+                {cluster.zone}
+              </Tag>
+            )}
+            {cluster.version && (
+              <Tag color="blue" style={{ fontSize: 10 }}>
+                {cluster.version}
+              </Tag>
+            )}
+          </div>
+          {cluster.joinedTime && (
+            <Text type="secondary" style={{ fontSize: 10 }}>
+              {formatJoinedTime(cluster.joinedTime)}
+            </Text>
+          )}
+        </div>
+
+        {/* 关键指标 */}
+        <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
+          <Col span={8} style={{ textAlign: 'center' }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1890ff' }}>
+              {cluster.nodeCount}
+            </Text>
+            <div style={{ fontSize: 10, color: '#666' }}>节点</div>
+          </Col>
+          <Col span={8} style={{ textAlign: 'center' }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#52c41a' }}>
+              {cluster.podCount}
+            </Text>
+            <div style={{ fontSize: 10, color: '#666' }}>Pod</div>
+          </Col>
+          <Col span={8} style={{ textAlign: 'center' }}>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#722ed1' }}>
+              {cluster.availability}%
+            </Text>
+            <div style={{ fontSize: 10, color: '#666' }}>可用性</div>
+          </Col>
+        </Row>
+
+        {/* 资源使用率 */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={{ fontSize: 12, color: '#666' }}>CPU</Text>
+              <Text style={{ fontSize: 12, fontWeight: 500 }}>{cpuPercent}%</Text>
+            </div>
+            <Progress 
+              percent={cpuPercent} 
+              strokeColor={getLoadLevelColor(cluster.loadLevel)}
+              trailColor="#f0f0f0"
+              size="small"
+              showInfo={false}
+            />
+          </div>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={{ fontSize: 12, color: '#666' }}>内存</Text>
+              <Text style={{ fontSize: 12, fontWeight: 500 }}>{memoryPercent}%</Text>
+            </div>
+            <Progress 
+              percent={memoryPercent} 
+              strokeColor={getLoadLevelColor(cluster.loadLevel)}
+              trailColor="#f0f0f0"
+              size="small"
+              showInfo={false}
+            />
+          </div>
+        </div>
+
+        {/* 集群能力和特性 */}
+        {cluster.capabilities && cluster.capabilities.length > 0 && (
+          <div style={{ marginBottom: 8 }}>
+            <Text style={{ fontSize: 10, color: '#666', display: 'block', marginBottom: 4 }}>集群能力:</Text>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {cluster.capabilities.slice(0, 3).map((capability, index) => (
+                <Tag 
+                  key={index} 
+                  color="cyan"
+                  style={{ fontSize: 9 }}
+                >
+                  {capability}
+                </Tag>
+              ))}
+              {cluster.capabilities.length > 3 && (
+                <Text style={{ fontSize: 9, color: '#999' }}>+{cluster.capabilities.length - 3}</Text>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 标签 */}
+        {cluster.labels && Object.keys(cluster.labels).length > 0 && (
+          <div style={{ marginBottom: 8 }}>
+            <Text style={{ fontSize: 10, color: '#666', display: 'block', marginBottom: 4 }}>标签:</Text>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {Object.entries(cluster.labels).slice(0, 3).map(([key, value]) => (
+                <Tag 
+                  key={key} 
+                  style={{ 
+                    fontSize: 9, 
+                    padding: '0 4px',
+                    backgroundColor: '#e0e7ff',
+                    color: '#4338ca',
+                    border: 'none'
+                  }}
+                >
+                  {key}={value}
+                </Tag>
+              ))}
+              {Object.keys(cluster.labels).length > 3 && (
+                <Text style={{ fontSize: 9, color: '#999' }}>+{Object.keys(cluster.labels).length - 3}</Text>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 污点信息（如果有） */}
+        {cluster.taints && cluster.taints.length > 0 && (
+          <div>
+            <Text style={{ fontSize: 10, color: '#666', display: 'block', marginBottom: 4 }}>污点:</Text>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+              {cluster.taints.slice(0, 2).map((taint, index) => (
+                <Tag 
+                  key={index} 
+                  color="orange"
+                  style={{ fontSize: 9 }}
+                >
+                  {taint.key}
+                </Tag>
+              ))}
+              {cluster.taints.length > 2 && (
+                <Text style={{ fontSize: 9, color: '#999' }}>+{cluster.taints.length - 2}</Text>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </Card>
+    </Tooltip>
+  );
+};
+
 const Overview = () => {
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, refetch, error } = useQuery({
     queryKey: ['GetOverview'],
     queryFn: async () => {
-      const ret = await GetOverview();
-      return ret.data;
+            try {
+        const ret = await GetOverview();
+        return ret.data;
+      } catch (error) {
+        console.error('获取概览数据失败:', error);
+        throw error;
+      }
     },
     refetchInterval: 30000, // 30秒自动刷新
+    retry: 3, // 重试3次
+    retryDelay: 1000, // 重试延迟1秒
+  });
+
+  // 数据适配器函数
+  const adaptClusterData = (clusters: any[]) => {
+    return clusters.map(cluster => ({
+      ...cluster,
+      status: cluster.status === 'True' ? 'Ready' : (cluster.status === 'False' ? 'NotReady' : 'Unknown'),
+      nodeCount: cluster.status === 'True' ? 1 : 0,
+      podCount: cluster.resources?.pod?.allocated || 0,
+      availability: cluster.status === 'True' ? 99 : 0,
+      displayName: cluster.name,
+      loadLevel: cluster.loadLevel || 'medium',
+      labels: cluster.labels || {},
+      taints: cluster.taints || [],
+    }));
+  };
+
+  // 获取集群资源数据
+  const { data: clustersData, isLoading: clustersLoading, refetch: refetchClusters, error: clustersError } = useQuery({
+    queryKey: ['GetClusterResources'],
+    queryFn: async () => {
+      try {
+        const ret = await GetClusterResources({ limit: 100 });
+        const adaptedData = {
+          ...ret.data,
+          clusters: adaptClusterData(ret.data.clusters || [])
+        };
+        return adaptedData;
+      } catch (error) {
+        console.error('获取集群资源失败:', error);
+        throw error;
+      }
+    },
+    refetchInterval: 30000, // 30秒自动刷新
+    retry: 3, // 重试3次
+    retryDelay: 1000, // 重试延迟1秒
   });
 
   // 计算资源使用率
@@ -111,6 +469,36 @@ const Overview = () => {
     <div className="w-full h-full px-[30px] py-[20px] box-border bg-[#FAFBFC]">
       <div className="w-full h-full bg-white box-border p-[12px] overflow-y-scroll">
         <Spin spinning={isLoading} size="large">
+          {error ? (
+            <div className="error-state" style={{ 
+              textAlign: 'center', 
+              padding: '60px 20px',
+              color: '#ff4d4f'
+            }}>
+              <AlertOutlined style={{ fontSize: 64, marginBottom: 24, color: '#ff4d4f' }} />
+              <Title level={3} style={{ color: '#ff4d4f', marginBottom: 12 }}>系统数据加载失败</Title>
+              <Text type="secondary" style={{ display: 'block', marginBottom: 24, fontSize: 16 }}>
+                服务器响应错误：{error?.message || '500 Internal Server Error'}
+              </Text>
+              <Text type="secondary" style={{ display: 'block', marginBottom: 24 }}>
+                请检查后端服务是否正常运行，或联系系统管理员
+              </Text>
+              <Button 
+                type="primary" 
+                size="large"
+                icon={<ReloadOutlined />}
+                onClick={() => refetch()}
+                style={{
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                  border: 'none',
+                  borderRadius: 8,
+                  boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)',
+                }}
+              >
+                重新加载数据
+              </Button>
+            </div>
+          ) : (
           <div className="modern-page-container">
             {/* 页面头部 */}
             <div className="page-header-modern" style={{ marginBottom: '16px' }}>
@@ -140,7 +528,10 @@ const Overview = () => {
                   <Button 
                     type="primary" 
                     icon={<ReloadOutlined />}
-                    onClick={() => refetch()}
+                    onClick={() => {
+                      refetch();
+                      refetchClusters();
+                    }}
                     size="large"
                     style={{
                       background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
@@ -159,10 +550,10 @@ const Overview = () => {
             <Row gutter={[16, 16]} className="content-section" style={{ margin: 0 }}>
               {/* 系统信息卡片 */}
               <Col xs={24} lg={8}>
-                <Card 
-                  className="modern-card stats-card"
-                  style={{ height: '100%' }}
-                  bodyStyle={{ padding: '16px' }}
+                              <Card 
+                className="modern-card stats-card"
+                style={{ height: '100%' }}
+                styles={{ body: { padding: '16px' } }}
                   title={
                     <div className="card-header" style={{ marginBottom: 0 }}>
                       <div className="header-icon-wrapper" style={{ width: 32, height: 32, fontSize: 16 }}>
@@ -269,7 +660,7 @@ const Overview = () => {
                   <Col span={24}>
                     <Card 
                       className="modern-card chart-card" 
-                      bodyStyle={{ padding: '16px' }}
+                      styles={{ body: { padding: '16px' } }}
                       title={
                         <div className="card-header" style={{ marginBottom: 0 }}>
                           <div className="header-icon-wrapper" style={{ width: 32, height: 32, fontSize: 16 }}>
@@ -307,7 +698,7 @@ const Overview = () => {
                             strokeColor={{ '0%': '#4f46e5', '100%': '#7c3aed' }}
                             trailColor="#f3f4f6"
                             className="modern-progress"
-                            strokeWidth={8}
+                            size="default"
                             showInfo={false}
                           />
                         </div>
@@ -321,9 +712,9 @@ const Overview = () => {
                             </Space>
                             <Text className="resource-value" style={{ fontSize: '12px' }}>
                               {data?.memberClusterStatus?.memorySummary?.allocatedMemory ? 
-                                (data.memberClusterStatus.memorySummary.allocatedMemory / 8 / 1024 / 1024).toFixed(2) : 0}GB / 
+                                (data.memberClusterStatus.memorySummary.allocatedMemory / 1024 / 1024 / 1024).toFixed(2) : 0}GB / 
                               {data?.memberClusterStatus?.memorySummary?.totalMemory ? 
-                                (data.memberClusterStatus.memorySummary.totalMemory / 8 / 1024 / 1024).toFixed(0) : 0}GB
+                                (data.memberClusterStatus.memorySummary.totalMemory / 1024 / 1024 / 1024).toFixed(0) : 0}GB
                             </Text>
                           </div>
                           <Progress
@@ -331,7 +722,7 @@ const Overview = () => {
                             strokeColor={{ '0%': '#10b981', '100%': '#059669' }}
                             trailColor="#f3f4f6"
                             className="modern-progress"
-                            strokeWidth={8}
+                            size="default"
                             showInfo={false}
                           />
                         </div>
@@ -343,7 +734,7 @@ const Overview = () => {
                   <Col span={24}>
                     <Card 
                       className="modern-card stats-card"
-                      bodyStyle={{ padding: '12px' }}
+                      styles={{ body: { padding: '12px' } }}
                       title={
                         <div className="card-header" style={{ marginBottom: 0 }}>
                           <div className="header-icon-wrapper" style={{ width: 32, height: 32, fontSize: 16 }}>
@@ -462,8 +853,110 @@ const Overview = () => {
               </Col>
             </Row>
 
-
+            {/* 集群资源视图 */}
+            <div className="cluster-resources-section" style={{ marginTop: '24px' }}>
+              <Card 
+                className="modern-card"
+                style={{ marginBottom: 0 }}
+                styles={{ body: { padding: '24px' } }}
+                title={
+                  <div className="card-header" style={{ marginBottom: 0 }}>
+                    <div className="header-icon-wrapper" style={{ width: 32, height: 32, fontSize: 16 }}>
+                      <ClusterOutlined className="header-icon" />
+                    </div>
+                    <div className="header-text">
+                      <Title level={4} className="card-title" style={{ fontSize: '18px', marginBottom: '4px' }}>
+                        集群资源视图
+                      </Title>
+                      <Text type="secondary" style={{ fontSize: '14px' }}>实时监控多云环境中的集群状态和资源使用情况</Text>
+                    </div>
+                  </div>
+                }
+                extra={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    {/* 集群统计信息 */}
+                    {clustersData?.clusters && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginRight: '16px' }}>
+                        <Text style={{ fontSize: '12px', color: '#666' }}>
+                          总计: <strong>{clustersData.clusters.length}</strong>
+                        </Text>
+                        <Text style={{ fontSize: '12px', color: '#52c41a' }}>
+                          健康: <strong>{clustersData.clusters.filter(c => c.status === 'Ready').length}</strong>
+                        </Text>
+                        {clustersData.clusters.filter(c => c.status !== 'Ready').length > 0 && (
+                          <Text style={{ fontSize: '12px', color: '#ff4d4f' }}>
+                            异常: <strong>{clustersData.clusters.filter(c => c.status !== 'Ready').length}</strong>
+                          </Text>
+                        )}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#666' }}>
+                      <div style={{ width: 8, height: 8, backgroundColor: '#52c41a', borderRadius: '50%' }}></div>
+                      <span>健康</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#666' }}>
+                      <div style={{ width: 8, height: 8, backgroundColor: '#faad14', borderRadius: '50%' }}></div>
+                      <span>警告</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#666' }}>
+                      <div style={{ width: 8, height: 8, backgroundColor: '#ff4d4f', borderRadius: '50%' }}></div>
+                      <span>异常</span>
+                    </div>
+                    <Button 
+                      type="default" 
+                      icon={<ReloadOutlined />}
+                      onClick={() => refetchClusters()}
+                      style={{ borderRadius: 6 }}
+                    >
+                      刷新
+                    </Button>
+                  </div>
+                }
+              >
+                <Spin spinning={clustersLoading}>
+                  {clustersError ? (
+                    <div className="error-state" style={{ 
+                      textAlign: 'center', 
+                      padding: '40px 20px',
+                      color: '#ff4d4f'
+                    }}>
+                      <AlertOutlined style={{ fontSize: 48, marginBottom: 16, color: '#ff4d4f' }} />
+                      <Title level={4} style={{ color: '#ff4d4f', marginBottom: 8 }}>集群数据加载失败</Title>
+                      <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+                        服务器响应错误：{clustersError?.message || '500 Internal Server Error'}
+                      </Text>
+                      <Button 
+                        type="primary" 
+                        icon={<ReloadOutlined />}
+                        onClick={() => refetchClusters()}
+                      >
+                        重新加载
+                      </Button>
+                    </div>
+                  ) : clustersData?.clusters && clustersData.clusters.length > 0 ? (
+                    <Row gutter={[16, 16]}>
+                      {clustersData.clusters.map((cluster) => (
+                        <Col xs={24} sm={12} lg={8} xl={6} key={cluster.name}>
+                          <ClusterCard cluster={cluster} />
+                        </Col>
+                      ))}
+                    </Row>
+                  ) : (
+                    <div className="empty-state" style={{ 
+                      textAlign: 'center', 
+                      padding: '40px 20px',
+                      color: '#999'
+                    }}>
+                      <ClusterOutlined style={{ fontSize: 48, marginBottom: 16, color: '#d9d9d9' }} />
+                      <Title level={4} style={{ color: '#999', marginBottom: 8 }}>暂无集群数据</Title>
+                      <Text type="secondary">请稍后再试或联系管理员</Text>
+                    </div>
+                  )}
+                </Spin>
+              </Card>
+            </div>
           </div>
+          )}
         </Spin>
       </div>
     </div>

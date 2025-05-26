@@ -28,6 +28,7 @@ import (
 
 	"github.com/karmada-io/dashboard/cmd/api/app/options"
 	"github.com/karmada-io/dashboard/cmd/api/app/router"
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/audit"                    // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/auth"                     // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/cluster"                  // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/clusteroverridepolicy"    // Importing route packages forces route registration
@@ -37,19 +38,24 @@ import (
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/cronjob"                  // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/daemonset"                // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/deployment"               // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/events"                   // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/health"                   // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/ingress"                  // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/job"                      // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/member"                   // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/monitoring"               // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/namespace"                // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/overridepolicy"           // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/overview"                 // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/policy"                   // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/propagationpolicy"        // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/scheduling"               // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/secret"                   // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/service"                  // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/statefulset"              // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/templates"                // Importing route packages forces route registration
 	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured"             // Importing route packages forces route registration
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/scheduling"               // Importing route packages forces route registration
-	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/policy"                   // Importing route packages forces route registration
+	_ "github.com/karmada-io/dashboard/cmd/api/app/routes/user"                     // Importing route packages forces route registration
 	"github.com/karmada-io/dashboard/pkg/client"
 	"github.com/karmada-io/dashboard/pkg/config"
 	"github.com/karmada-io/dashboard/pkg/environment"

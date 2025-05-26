@@ -21,16 +21,25 @@ type ClustersResourceView struct {
 	Clusters []ClusterResourceInfo `json:"clusters"`
 }
 
-// ClusterResourceInfo 集群资源信息
+// ClusterResourceInfo 集群资源信息（增强版）
 type ClusterResourceInfo struct {
-	Name        string           `json:"name"`
-	Region      string           `json:"region,omitempty"`
-	Zone        string           `json:"zone,omitempty"`
-	Status      string           `json:"status"`
-	Resources   ResourceMetrics  `json:"resources"`
-	Labels      map[string]string `json:"labels"`
-	Taints      []TaintInfo      `json:"taints"`
-	LoadLevel   string           `json:"loadLevel"` // low, medium, high
+	Name         string            `json:"name"`
+	DisplayName  string            `json:"displayName,omitempty"`
+	Region       string            `json:"region,omitempty"`
+	Zone         string            `json:"zone,omitempty"`
+	Status       string            `json:"status"`
+	Version      string            `json:"version,omitempty"`
+	Provider     string            `json:"provider,omitempty"`
+	Resources    ResourceMetrics   `json:"resources"`
+	Labels       map[string]string `json:"labels"`
+	Taints       []TaintInfo       `json:"taints"`
+	LoadLevel    string            `json:"loadLevel"` // low, medium, high
+	NodeCount    int32             `json:"nodeCount"`
+	PodCount     int32             `json:"podCount"`
+	Availability int32             `json:"availability"`
+	Location     *LocationInfo     `json:"location,omitempty"`
+	Capabilities []string          `json:"capabilities,omitempty"`
+	JoinedTime   string            `json:"joinedTime,omitempty"`
 }
 
 // ResourceMetrics 资源指标
@@ -60,6 +69,14 @@ type TaintInfo struct {
 	Key    string `json:"key"`
 	Value  string `json:"value,omitempty"`
 	Effect string `json:"effect"`
+}
+
+// LocationInfo 地理位置信息
+type LocationInfo struct {
+	Country   string  `json:"country"`
+	City      string  `json:"city"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }
 
 // SchedulingSimulateRequest 调度模拟请求
@@ -204,4 +221,76 @@ type EdgeStyle struct {
 	Color     string `json:"color,omitempty"`
 	Width     int    `json:"width,omitempty"`
 	DashArray string `json:"dashArray,omitempty"`
+}
+
+// VisualClusterInfo 可视化调度集群信息
+type VisualClusterInfo struct {
+	Name         string                     `json:"name"`
+	DisplayName  string                     `json:"displayName,omitempty"`
+	Region       string                     `json:"region,omitempty"`
+	Zone         string                     `json:"zone,omitempty"`
+	Status       string                     `json:"status"`
+	Resources    VisualClusterResources     `json:"resources"`
+	Labels       map[string]string          `json:"labels,omitempty"`
+	Capabilities []string                   `json:"capabilities,omitempty"`
+}
+
+// VisualClusterResources 可视化集群资源
+type VisualClusterResources struct {
+	CPU   VisualResourceInfo `json:"cpu"`
+	Memory VisualResourceInfo `json:"memory"`
+	Nodes  VisualNodeInfo     `json:"nodes"`
+}
+
+// VisualResourceInfo 可视化资源信息
+type VisualResourceInfo struct {
+	Total     int64 `json:"total"`
+	Used      int64 `json:"used"`
+	Available int64 `json:"available"`
+}
+
+// VisualNodeInfo 可视化节点信息
+type VisualNodeInfo struct {
+	Total int32 `json:"total"`
+	Ready int32 `json:"ready"`
+}
+
+// VisualClustersResponse 可视化集群列表响应
+type VisualClustersResponse struct {
+	Clusters []VisualClusterInfo `json:"clusters"`
+}
+
+// VisualSchedulingSimulateRequest 可视化调度模拟请求
+type VisualSchedulingSimulateRequest struct {
+	Workload  VisualWorkloadSpec         `json:"workload"`
+	Clusters  []string                   `json:"clusters"`
+	Strategy  string                     `json:"strategy"` // Divided, Duplicated
+	Weights   map[string]int32           `json:"weights,omitempty"`
+}
+
+// VisualWorkloadSpec 可视化工作负载规格
+type VisualWorkloadSpec struct {
+	Kind      string                   `json:"kind"`
+	Replicas  int32                    `json:"replicas"`
+	Resources VisualWorkloadResources  `json:"resources,omitempty"`
+}
+
+// VisualWorkloadResources 可视化工作负载资源
+type VisualWorkloadResources struct {
+	CPU    string `json:"cpu,omitempty"`
+	Memory string `json:"memory,omitempty"`
+}
+
+// VisualSchedulingSimulateResponse 可视化调度模拟响应
+type VisualSchedulingSimulateResponse struct {
+	Allocation []VisualAllocationResult `json:"allocation"`
+	Warnings   []string                 `json:"warnings"`
+	Feasible   bool                     `json:"feasible"`
+}
+
+// VisualAllocationResult 可视化分配结果
+type VisualAllocationResult struct {
+	ClusterName string `json:"clusterName"`
+	Replicas    int32  `json:"replicas"`
+	Reason      string `json:"reason"`
 } 

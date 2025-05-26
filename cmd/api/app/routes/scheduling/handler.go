@@ -29,13 +29,13 @@ import (
 // handleGetClustersResources 获取集群资源视图
 func handleGetClustersResources(c *gin.Context) {
 	dataSelect := common.ParseDataSelectPathParameter(c)
-	
+
 	result, err := GetClustersResourcesView(dataSelect)
 	if err != nil {
 		common.Fail(c, err)
 		return
 	}
-	
+
 	common.Success(c, result)
 }
 
@@ -46,42 +46,77 @@ func handleSchedulingSimulate(c *gin.Context) {
 		common.Fail(c, fmt.Errorf("请求参数格式错误: %v", err))
 		return
 	}
-	
+
 	result, err := SimulateScheduling(&req)
 	if err != nil {
 		common.Fail(c, err)
 		return
 	}
-	
+
 	common.Success(c, result)
 }
 
 // handleGetResourceSchedulingTree 获取资源调度关系树形图
 func handleGetResourceSchedulingTree(c *gin.Context) {
 	var req v1.ResourceSchedulingTreeRequest
-	
+
 	// 获取查询参数
 	req.ResourceType = c.Query("resourceType")
 	req.Namespace = c.Query("namespace")
 	req.ResourceName = c.Query("resourceName")
-	
+
 	result, err := GetResourceSchedulingTree(&req)
 	if err != nil {
 		common.Fail(c, err)
 		return
 	}
-	
+
+	common.Success(c, result)
+}
+
+// handleGetVisualClusters 获取可视化调度集群信息
+func handleGetVisualClusters(c *gin.Context) {
+	result, err := GetVisualClusters()
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+
+	common.Success(c, result)
+}
+
+// handleVisualSchedulingSimulate 可视化调度模拟
+func handleVisualSchedulingSimulate(c *gin.Context) {
+	var req v1.VisualSchedulingSimulateRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.Fail(c, fmt.Errorf("请求参数格式错误: %v", err))
+		return
+	}
+
+	result, err := SimulateVisualScheduling(&req)
+	if err != nil {
+		common.Fail(c, err)
+		return
+	}
+
 	common.Success(c, result)
 }
 
 func init() {
 	r := router.V1()
-	
+
 	// 可视化调度相关接口
 	scheduling := r.Group("/scheduling")
 	{
 		scheduling.GET("/clusters/resources", handleGetClustersResources)
 		scheduling.POST("/simulate", handleSchedulingSimulate)
 		scheduling.GET("/tree", handleGetResourceSchedulingTree)
+
+		// 新增可视化调度接口
+		visual := scheduling.Group("/visual")
+		{
+			visual.GET("/clusters", handleGetVisualClusters)
+			visual.POST("/simulate", handleVisualSchedulingSimulate)
+		}
 	}
-} 
+}

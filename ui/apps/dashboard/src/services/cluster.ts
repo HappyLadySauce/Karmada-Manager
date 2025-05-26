@@ -120,3 +120,65 @@ export async function DeleteCluster(clusterName: string) {
   );
   return resp.data;
 }
+
+// 集群资源视图相关接口（增强版）
+export interface ClusterResource {
+  name: string;
+  displayName?: string;
+  region?: string;
+  zone?: string;
+  status: 'Ready' | 'NotReady' | 'Unknown';
+  version?: string;
+  provider?: string;
+  resources: {
+    cpu: {
+      capacity: number;
+      allocatable: number;
+      allocated: number;
+      usage?: number;
+    };
+    memory: {
+      capacity: number;
+      allocatable: number;
+      allocated: number;
+      usage?: number;
+    };
+    pod: {
+      capacity: number;
+      allocatable: number;
+      allocated: number;
+    };
+  };
+  labels: Record<string, string>;
+  taints?: TaintParam[];
+  loadLevel: 'low' | 'medium' | 'high';
+  nodeCount: number;
+  podCount: number;
+  availability: number;
+  location?: {
+    country: string;
+    city: string;
+    latitude: number;
+    longitude: number;
+  };
+  capabilities?: string[];
+  joinedTime?: string;
+}
+
+export interface ClusterResourceResp {
+  clusters: ClusterResource[];
+  total?: number;
+}
+
+export async function GetClusterResources(params?: {
+  page?: number;
+  limit?: number;
+  region?: string;
+  status?: string;
+}) {
+  const resp = await karmadaClient.get<IResponse<ClusterResourceResp>>(
+    '/scheduling/clusters/resources',
+    { params },
+  );
+  return resp.data;
+}

@@ -29,7 +29,7 @@
 
 ## 概览页面 API
 
-### 获取控制器信息
+### 获取控制器信息（增强版）
 - **URL**: `/api/v1/overview/karmada`
 - **Method**: `GET`
 - **Response**:
@@ -37,13 +37,16 @@
 {
   "code": 200,
   "data": {
-    "version": {
-      "gitVersion": "v1.7.0",
-      "gitCommit": "abc123",
-      "buildDate": "2024-01-01T00:00:00Z"
-    },
-    "status": "running",
-    "createTime": "2024-01-01T00:00:00Z"
+    "karmadaInfo": {
+      "version": {
+        "gitVersion": "v1.8.0",
+        "gitCommit": "abc123def456",
+        "buildDate": "2024-01-15T10:30:00Z"
+      },
+      "status": "running",
+      "createTime": "2024-01-01T00:00:00Z",
+      "uptime": "720h30m45s"
+    }
   }
 }
 ```
@@ -467,22 +470,23 @@
 
 ## 可视化调度 API
 
-### 获取集群资源视图
+### 获取集群资源视图（增强版）
 - **URL**: `/api/v1/scheduling/clusters/resources`
 - **Method**: `GET`
 - **Parameters**:
-  - `page` (int): 页码
-  - `limit` (int): 每页数量
+  - `page` (int): 页码，默认1
+  - `limit` (int): 每页数量，默认100
 - **Response**:
 ```json
 {
   "code": 200,
+  "message": "success",
   "data": {
     "clusters": [
       {
-        "name": "cluster1",
-        "region": "us-west-1",
-        "zone": "us-west-1a",
+        "name": "cluster-beijing",
+        "region": "beijing",
+        "zone": "zone-a",
         "status": "Ready",
         "resources": {
           "cpu": {
@@ -502,7 +506,9 @@
           }
         },
         "labels": {
-          "cluster.karmada.io/region": "us-west-1"
+          "region": "beijing",
+          "env": "production",
+          "zone": "a"
         },
         "taints": [
           {
@@ -511,9 +517,90 @@
             "effect": "NoSchedule"
           }
         ],
-        "loadLevel": "medium"
+        "loadLevel": "medium",
+        "nodeCount": 12,
+        "podCount": 256,
+        "availability": 98
       }
     ]
+  }
+}
+```
+
+### 获取可视化调度集群信息
+- **URL**: `/api/v1/scheduling/visual/clusters`
+- **Method**: `GET`
+- **描述**: 获取用于可视化调度配置的集群信息
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "clusters": [
+      {
+        "name": "cluster1",
+        "displayName": "北京集群",
+        "region": "beijing",
+        "zone": "zone-a",
+        "status": "Ready",
+        "resources": {
+          "cpu": { "total": 1000, "used": 600, "available": 400 },
+          "memory": { "total": 2048000, "used": 1024000, "available": 1024000 },
+          "nodes": { "total": 12, "ready": 12 }
+        },
+        "labels": {
+          "region": "beijing",
+          "env": "production"
+        },
+        "capabilities": ["gpu", "ssd-storage"]
+      }
+    ]
+  }
+}
+```
+
+### 可视化调度模拟
+- **URL**: `/api/v1/scheduling/visual/simulate`
+- **Method**: `POST`
+- **描述**: 模拟调度策略，预测资源分配结果
+- **Request Body**:
+```json
+{
+  "workload": {
+    "kind": "Deployment",
+    "replicas": 6,
+    "resources": {
+      "cpu": "100m",
+      "memory": "128Mi"
+    }
+  },
+  "clusters": ["cluster-beijing", "cluster-shanghai"],
+  "strategy": "Divided",
+  "weights": {
+    "cluster-beijing": 2,
+    "cluster-shanghai": 1
+  }
+}
+```
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "allocation": [
+      {
+        "clusterName": "cluster-beijing",
+        "replicas": 4,
+        "reason": "按权重分配，权重比例2:1"
+      },
+      {
+        "clusterName": "cluster-shanghai",
+        "replicas": 2,
+        "reason": "按权重分配，权重比例2:1"
+      }
+    ],
+    "warnings": [],
+    "feasible": true
   }
 }
 ```
@@ -991,6 +1078,422 @@
   - `page` (int): 页码
   - `limit` (int): 每页数量
 
+## 实时监控 API
+
+### 获取实时监控数据
+- **URL**: `/api/v1/monitoring/realtime`
+- **Method**: `GET`
+- **描述**: 获取实时监控数据，支持WebSocket或SSE
+- **Parameters**:
+  - `type` (string, optional): 监控类型 (cluster, resource, all)
+  - `interval` (int, optional): 刷新间隔，秒，默认30
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "timestamp": "2024-01-15T10:30:00Z",
+    "clusters": [
+      {
+        "name": "cluster-beijing",
+        "status": "Ready",
+        "resources": {
+          "cpu": { "usage": 65.5, "trend": "up" },
+          "memory": { "usage": 52.3, "trend": "stable" },
+          "pods": { "count": 256, "trend": "up" }
+        }
+      }
+    ],
+    "alerts": [
+      {
+        "level": "warning",
+        "message": "集群 cluster-beijing CPU 使用率过高",
+        "timestamp": "2024-01-15T10:25:00Z"
+      }
+    ]
+  }
+}
+```
+
+## 事件和告警 API
+
+### 获取最近事件
+- **URL**: `/api/v1/events/recent`
+- **Method**: `GET`
+- **Parameters**:
+  - `limit` (int, optional): 事件数量限制，默认50
+  - `severity` (string, optional): 严重程度过滤 (info, warning, error)
+  - `source` (string, optional): 事件源过滤
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "events": [
+      {
+        "id": "event-001",
+        "timestamp": "2024-01-15T10:30:00Z",
+        "type": "Warning",
+        "source": "cluster-beijing",
+        "message": "节点资源使用率过高",
+        "severity": "medium",
+        "category": "resource",
+        "details": {
+          "node": "node-001",
+          "cpuUsage": 85.5,
+          "memoryUsage": 78.2
+        }
+      }
+    ],
+    "total": 125
+  }
+}
+```
+
+### 获取告警规则
+- **URL**: `/api/v1/alerts/rules`
+- **Method**: `GET`
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "rules": [
+      {
+        "id": "rule-001",
+        "name": "CPU使用率告警",
+        "condition": "cpu_usage > 80",
+        "severity": "warning",
+        "enabled": true
+      }
+    ]
+  }
+}
+```
+
+## 策略模板 API
+
+### 获取策略模板列表
+- **URL**: `/api/v1/policy/templates`
+- **Method**: `GET`
+- **Parameters**:
+  - `category` (string, optional): 模板分类 (workload, service, config)
+  - `type` (string, optional): 策略类型 (propagation, override)
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "templates": [
+      {
+        "id": "template-001",
+        "name": "多区域部署模板",
+        "description": "将工作负载部署到多个地理区域",
+        "category": "workload",
+        "type": "propagation",
+        "template": "apiVersion: policy.karmada.io/v1alpha1\nkind: PropagationPolicy\n...",
+        "variables": [
+          {
+            "name": "clusters",
+            "type": "array",
+            "description": "目标集群列表",
+            "required": true
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### 验证策略YAML
+- **URL**: `/api/v1/policy/validate-yaml`
+- **Method**: `POST`
+- **Request Body**:
+```json
+{
+  "yaml": "apiVersion: policy.karmada.io/v1alpha1\nkind: PropagationPolicy\n...",
+  "type": "propagation"
+}
+```
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      "建议添加资源选择器以提高策略精确性"
+    ],
+    "suggestions": [
+      "可以考虑添加亲和性规则优化调度"
+    ]
+  }
+}
+```
+
+## 用户偏好和配置 API
+
+### 获取用户偏好设置
+- **URL**: `/api/v1/user/preferences`
+- **Method**: `GET`
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "theme": "dark",
+    "language": "zh-CN",
+    "timezone": "Asia/Shanghai",
+    "defaultCluster": "cluster-beijing",
+    "dashboardLayout": {
+      "overview": ["clusters", "resources", "policies"],
+      "refreshInterval": 30
+    }
+  }
+}
+```
+
+### 更新用户偏好设置
+- **URL**: `/api/v1/user/preferences`
+- **Method**: `PUT`
+- **Request Body**:
+```json
+{
+  "theme": "light",
+  "language": "en-US",
+  "timezone": "UTC",
+  "defaultCluster": "cluster-shanghai"
+}
+```
+
+## 审计日志 API
+
+### 获取审计日志
+- **URL**: `/api/v1/audit/logs`
+- **Method**: `GET`
+- **Parameters**:
+  - `user` (string, optional): 用户过滤
+  - `action` (string, optional): 操作类型过滤
+  - `resource` (string, optional): 资源类型过滤
+  - `startTime` (string, optional): 开始时间
+  - `endTime` (string, optional): 结束时间
+  - `page` (int): 页码
+  - `limit` (int): 每页数量
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "logs": [
+      {
+        "id": "audit-001",
+        "timestamp": "2024-01-15T10:30:00Z",
+        "user": "admin",
+        "action": "create",
+        "resource": "deployment",
+        "resourceName": "nginx-app",
+        "namespace": "default",
+        "cluster": "cluster-beijing",
+        "result": "success",
+        "details": {
+          "replicas": 3,
+          "image": "nginx:1.20"
+        }
+      }
+    ],
+    "total": 1250,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+## 系统健康检查 API
+
+### 系统健康状态
+- **URL**: `/api/v1/health`
+- **Method**: `GET`
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "status": "healthy",
+    "timestamp": "2024-01-15T10:30:00Z",
+    "uptime": "720h30m45s",
+    "version": "v1.8.0"
+  }
+}
+```
+
+### 详细健康检查
+- **URL**: `/api/v1/health/detailed`
+- **Method**: `GET`
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "overall": "healthy",
+    "components": [
+      {
+        "name": "karmada-apiserver",
+        "status": "healthy",
+        "message": "API服务器运行正常",
+        "lastCheck": "2024-01-15T10:30:00Z"
+      },
+      {
+        "name": "karmada-controller-manager",
+        "status": "healthy",
+        "message": "控制器管理器运行正常",
+        "lastCheck": "2024-01-15T10:30:00Z"
+      },
+      {
+        "name": "karmada-scheduler",
+        "status": "healthy",
+        "message": "调度器运行正常",
+        "lastCheck": "2024-01-15T10:30:00Z"
+      }
+    ],
+    "dependencies": [
+      {
+        "name": "etcd",
+        "status": "healthy",
+        "latency": "2ms"
+      },
+      {
+        "name": "member-clusters",
+        "status": "partial",
+        "message": "2/3 集群健康",
+        "details": {
+          "healthy": ["cluster-beijing", "cluster-shanghai"],
+          "unhealthy": ["cluster-shenzhen"]
+        }
+      }
+    ]
+  }
+}
+```
+
+## 集群管理增强 API
+
+### 获取集群列表（增强版）
+- **URL**: `/api/v1/cluster`
+- **Method**: `GET`
+- **Parameters**:
+  - `page` (int): 页码
+  - `limit` (int): 每页数量
+  - `region` (string, optional): 区域过滤
+  - `status` (string, optional): 状态过滤
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "clusters": [
+      {
+        "name": "cluster-beijing",
+        "displayName": "北京生产集群",
+        "region": "beijing",
+        "zone": "zone-a",
+        "status": "Ready",
+        "version": "v1.28.0",
+        "provider": "alicloud",
+        "location": {
+          "country": "China",
+          "city": "Beijing",
+          "latitude": 39.9042,
+          "longitude": 116.4074
+        },
+        "resources": {
+          "nodes": { "total": 12, "ready": 12 },
+          "cpu": { "total": "120 cores", "used": "72 cores" },
+          "memory": { "total": "480Gi", "used": "288Gi" },
+          "storage": { "total": "12Ti", "used": "7.2Ti" }
+        },
+        "conditions": [
+          {
+            "type": "Ready",
+            "status": "True",
+            "lastTransitionTime": "2024-01-15T10:30:00Z"
+          }
+        ],
+        "joinedTime": "2024-01-01T00:00:00Z"
+      }
+    ],
+    "total": 3
+  }
+}
+```
+
+### 获取集群详情（增强版）
+- **URL**: `/api/v1/cluster/:cluster`
+- **Method**: `GET`
+- **Response**:
+```json
+{
+  "code": 200,
+  "data": {
+    "cluster": {
+      "name": "cluster-beijing",
+      "displayName": "北京生产集群",
+      "region": "beijing",
+      "zone": "zone-a",
+      "status": "Ready",
+      "version": "v1.28.0",
+      "provider": "alicloud",
+      "location": {
+        "country": "China",
+        "city": "Beijing",
+        "latitude": 39.9042,
+        "longitude": 116.4074
+      },
+      "spec": {
+        "connection": {
+          "type": "direct",
+          "endpoint": "https://cluster-beijing.example.com:6443"
+        },
+        "syncMode": "Push",
+        "impersonatorSecretRef": {
+          "name": "cluster-beijing-impersonator",
+          "namespace": "karmada-cluster"
+        }
+      },
+      "status": {
+        "conditions": [
+          {
+            "type": "Ready",
+            "status": "True",
+            "lastTransitionTime": "2024-01-15T10:30:00Z",
+            "message": "cluster is ready"
+          }
+        ],
+        "nodeSummary": {
+          "totalNum": 12,
+          "readyNum": 12
+        },
+        "resourceSummary": {
+          "allocatable": {
+            "cpu": "120",
+            "memory": "480Gi",
+            "pods": "1320"
+          },
+          "allocated": {
+            "cpu": "72",
+            "memory": "288Gi",
+            "pods": "789"
+          }
+        }
+      },
+      "joinedTime": "2024-01-01T00:00:00Z",
+      "lastUpdateTime": "2024-01-15T10:30:00Z"
+    }
+  }
+}
+```
+
 ## 错误码说明
 
 | 错误码 | 说明 |
@@ -1108,6 +1611,18 @@
 ```
 
 ## 版本更新历史
+
+### v1.2.0 (2024-01-15) - 前端需求完善版
+- ✅ **集群资源视图增强**: 增加区域、可用性、节点数、Pod数等详细信息
+- ✅ **可视化调度接口**: 新增可视化调度集群信息和模拟接口
+- ✅ **实时监控支持**: 实现实时监控数据获取，支持趋势分析
+- ✅ **事件和告警系统**: 完善事件查询和告警规则管理
+- ✅ **策略模板管理**: 支持策略模板列表、YAML验证功能
+- ✅ **用户偏好设置**: 支持主题、语言、时区等个性化配置
+- ✅ **审计日志完善**: 详细的操作记录和审计追踪
+- ✅ **健康检查增强**: 系统组件和依赖项健康状态监控
+- ✅ **集群管理升级**: 增加地理位置、版本、提供商等信息
+- ✅ **概览信息增强**: 支持运行时长、详细版本信息
 
 ### v1.1.0 (2025-05-26)
 - ✅ **解决写死问题**: 策略接口完全用户自定义，去除所有硬编码值

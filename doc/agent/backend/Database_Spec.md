@@ -322,7 +322,7 @@ type TreeEdge struct {
 }
 ```
 
-### 5. 集群资源视图模型
+### 5. 集群资源视图模型（增强版）
 
 ```go
 type ClustersResourceView struct {
@@ -330,23 +330,40 @@ type ClustersResourceView struct {
 }
 
 type ClusterResourceInfo struct {
-    Name      string          `json:"name"`
-    Region    string          `json:"region,omitempty"`
-    Zone      string          `json:"zone,omitempty"`
-    Status    string          `json:"status"`
-    Labels    map[string]string `json:"labels,omitempty"`
-    Resources ResourceMetrics   `json:"resources"`
-    Taints    []TaintInfo       `json:"taints,omitempty"`
-    LoadLevel string            `json:"loadLevel"`
+    Name         string            `json:"name"`
+    DisplayName  string            `json:"displayName,omitempty"`
+    Region       string            `json:"region,omitempty"`
+    Zone         string            `json:"zone,omitempty"`
+    Status       string            `json:"status"`
+    Version      string            `json:"version,omitempty"`
+    Provider     string            `json:"provider,omitempty"`
+    Labels       map[string]string `json:"labels,omitempty"`
+    Resources    ResourceMetrics   `json:"resources"`
+    Taints       []TaintInfo       `json:"taints,omitempty"`
+    LoadLevel    string            `json:"loadLevel"`
+    NodeCount    int32             `json:"nodeCount"`
+    PodCount     int32             `json:"podCount"`
+    Availability int32             `json:"availability"`
+    Location     *LocationInfo     `json:"location,omitempty"`
+    Capabilities []string          `json:"capabilities,omitempty"`
+    JoinedTime   time.Time         `json:"joinedTime,omitempty"`
 }
 
 type ResourceMetrics struct {
     CPU    ResourceMetric `json:"cpu"`
     Memory ResourceMetric `json:"memory"`
     Pod    PodMetric      `json:"pod"`
+    Storage *ResourceMetric `json:"storage,omitempty"`
 }
 
 type ResourceMetric struct {
+    Capacity    int64 `json:"capacity"`
+    Allocatable int64 `json:"allocatable"`
+    Allocated   int64 `json:"allocated"`
+    Unit        string `json:"unit,omitempty"`
+}
+
+type PodMetric struct {
     Capacity    int64 `json:"capacity"`
     Allocatable int64 `json:"allocatable"`
     Allocated   int64 `json:"allocated"`
@@ -356,6 +373,203 @@ type TaintInfo struct {
     Key    string `json:"key"`
     Value  string `json:"value"`
     Effect string `json:"effect"`
+}
+
+type LocationInfo struct {
+    Country   string  `json:"country"`
+    City      string  `json:"city"`
+    Latitude  float64 `json:"latitude"`
+    Longitude float64 `json:"longitude"`
+}
+```
+
+### 6. 实时监控数据模型
+
+```go
+type RealtimeMonitoringData struct {
+    Timestamp time.Time              `json:"timestamp"`
+    Clusters  []ClusterMonitoringInfo `json:"clusters"`
+    Alerts    []AlertInfo             `json:"alerts"`
+}
+
+type ClusterMonitoringInfo struct {
+    Name      string               `json:"name"`
+    Status    string               `json:"status"`
+    Resources ClusterResourceUsage `json:"resources"`
+}
+
+type ClusterResourceUsage struct {
+    CPU    ResourceUsageInfo `json:"cpu"`
+    Memory ResourceUsageInfo `json:"memory"`
+    Pods   PodUsageInfo      `json:"pods"`
+}
+
+type ResourceUsageInfo struct {
+    Usage float64 `json:"usage"` // 使用率百分比
+    Trend string  `json:"trend"` // up, down, stable
+}
+
+type PodUsageInfo struct {
+    Count int32  `json:"count"`
+    Trend string `json:"trend"`
+}
+
+type AlertInfo struct {
+    Level     string    `json:"level"`     // info, warning, error
+    Message   string    `json:"message"`
+    Timestamp time.Time `json:"timestamp"`
+    Source    string    `json:"source"`
+}
+```
+
+### 7. 事件和告警模型
+
+```go
+type EventInfo struct {
+    ID        string                 `json:"id"`
+    Timestamp time.Time              `json:"timestamp"`
+    Type      string                 `json:"type"`      // Info, Warning, Error
+    Source    string                 `json:"source"`    // 事件源
+    Message   string                 `json:"message"`
+    Severity  string                 `json:"severity"`  // low, medium, high, critical
+    Category  string                 `json:"category"`  // resource, network, storage, etc.
+    Details   map[string]interface{} `json:"details,omitempty"`
+}
+
+type AlertRule struct {
+    ID        string `json:"id"`
+    Name      string `json:"name"`
+    Condition string `json:"condition"`
+    Severity  string `json:"severity"`
+    Enabled   bool   `json:"enabled"`
+    Actions   []AlertAction `json:"actions,omitempty"`
+}
+
+type AlertAction struct {
+    Type   string                 `json:"type"`   // email, webhook, slack
+    Config map[string]interface{} `json:"config"`
+}
+```
+
+### 8. 策略模板模型
+
+```go
+type PolicyTemplate struct {
+    ID          string              `json:"id"`
+    Name        string              `json:"name"`
+    Description string              `json:"description"`
+    Category    string              `json:"category"` // workload, service, config
+    Type        string              `json:"type"`     // propagation, override
+    Template    string              `json:"template"` // YAML模板内容
+    Variables   []TemplateVariable  `json:"variables"`
+    Tags        []string            `json:"tags,omitempty"`
+    CreatedAt   time.Time           `json:"createdAt"`
+    UpdatedAt   time.Time           `json:"updatedAt"`
+}
+
+type TemplateVariable struct {
+    Name        string      `json:"name"`
+    Type        string      `json:"type"`        // string, number, boolean, array, object
+    Description string      `json:"description"`
+    Required    bool        `json:"required"`
+    Default     interface{} `json:"default,omitempty"`
+    Options     []string    `json:"options,omitempty"` // 枚举选项
+}
+
+type PolicyValidationResult struct {
+    Valid       bool     `json:"valid"`
+    Errors      []string `json:"errors"`
+    Warnings    []string `json:"warnings"`
+    Suggestions []string `json:"suggestions"`
+}
+```
+
+### 9. 用户偏好设置模型
+
+```go
+type UserPreferences struct {
+    UserID          string                 `json:"userId"`
+    Theme           string                 `json:"theme"`           // light, dark, auto
+    Language        string                 `json:"language"`        // zh-CN, en-US, etc.
+    Timezone        string                 `json:"timezone"`        // Asia/Shanghai, UTC, etc.
+    DefaultCluster  string                 `json:"defaultCluster,omitempty"`
+    DashboardLayout DashboardLayoutConfig  `json:"dashboardLayout"`
+    Notifications   NotificationConfig     `json:"notifications"`
+    CreatedAt       time.Time              `json:"createdAt"`
+    UpdatedAt       time.Time              `json:"updatedAt"`
+}
+
+type DashboardLayoutConfig struct {
+    Overview        []string `json:"overview"`        // 概览页组件顺序
+    RefreshInterval int32    `json:"refreshInterval"` // 自动刷新间隔（秒）
+    PageSize        int32    `json:"pageSize"`        // 默认分页大小
+}
+
+type NotificationConfig struct {
+    Email   bool `json:"email"`
+    Browser bool `json:"browser"`
+    Sound   bool `json:"sound"`
+}
+```
+
+### 10. 审计日志模型
+
+```go
+type AuditLog struct {
+    ID           string                 `json:"id"`
+    Timestamp    time.Time              `json:"timestamp"`
+    User         string                 `json:"user"`
+    Action       string                 `json:"action"`       // create, update, delete, get
+    Resource     string                 `json:"resource"`     // deployment, service, policy
+    ResourceName string                 `json:"resourceName"`
+    Namespace    string                 `json:"namespace,omitempty"`
+    Cluster      string                 `json:"cluster,omitempty"`
+    Result       string                 `json:"result"`       // success, failure
+    Details      map[string]interface{} `json:"details,omitempty"`
+    ClientIP     string                 `json:"clientIP,omitempty"`
+    UserAgent    string                 `json:"userAgent,omitempty"`
+}
+
+type AuditQuery struct {
+    User       string    `json:"user,omitempty"`
+    Action     string    `json:"action,omitempty"`
+    Resource   string    `json:"resource,omitempty"`
+    StartTime  time.Time `json:"startTime,omitempty"`
+    EndTime    time.Time `json:"endTime,omitempty"`
+    Page       int32     `json:"page"`
+    Limit      int32     `json:"limit"`
+}
+```
+
+### 11. 系统健康检查模型
+
+```go
+type SystemHealth struct {
+    Status     string              `json:"status"`     // healthy, degraded, unhealthy
+    Timestamp  time.Time           `json:"timestamp"`
+    Uptime     string              `json:"uptime"`
+    Version    string              `json:"version"`
+    Components []ComponentHealth   `json:"components,omitempty"`
+}
+
+type ComponentHealth struct {
+    Name      string    `json:"name"`
+    Status    string    `json:"status"`    // healthy, warning, error
+    Message   string    `json:"message"`
+    LastCheck time.Time `json:"lastCheck"`
+    Metrics   map[string]interface{} `json:"metrics,omitempty"`
+}
+
+type SystemDependencies struct {
+    Dependencies []DependencyHealth `json:"dependencies"`
+}
+
+type DependencyHealth struct {
+    Name    string                 `json:"name"`
+    Status  string                 `json:"status"`
+    Latency string                 `json:"latency,omitempty"`
+    Message string                 `json:"message,omitempty"`
+    Details map[string]interface{} `json:"details,omitempty"`
 }
 ```
 
@@ -387,6 +601,323 @@ policy, err := karmadaClient.PolicyV1alpha1().PropagationPolicies(namespace).Cre
 
 // 获取集群列表
 clusters, err := karmadaClient.ClusterV1alpha1().Clusters().List(ctx, metav1.ListOptions{})
+```
+
+### 3. 集群资源视图数据访问
+```go
+// 获取集群资源视图
+func GetClusterResourcesView(page, limit int) (*ClustersResourceView, error) {
+    karmadaClient := client.InClusterKarmadaClient()
+    
+    // 获取所有集群
+    clusters, err := karmadaClient.ClusterV1alpha1().Clusters().List(ctx, metav1.ListOptions{})
+    if err != nil {
+        return nil, err
+    }
+    
+    var resourceView ClustersResourceView
+    
+    for _, cluster := range clusters.Items {
+        clusterInfo := ClusterResourceInfo{
+            Name:         cluster.Name,
+            DisplayName:  getDisplayName(cluster),
+            Region:       getRegion(cluster),
+            Zone:         getZone(cluster),
+            Status:       string(cluster.Status.Conditions[0].Status),
+            Version:      cluster.Status.KubernetesVersion,
+            Provider:     getProvider(cluster),
+            Labels:       cluster.Labels,
+            Location:     getLocationInfo(cluster),
+            JoinedTime:   cluster.CreationTimestamp.Time,
+        }
+        
+        // 获取集群资源使用情况
+        resourceMetrics, err := getClusterResourceMetrics(cluster.Name)
+        if err == nil {
+            clusterInfo.Resources = resourceMetrics
+        }
+        
+        // 获取污点信息
+        taints, err := getClusterTaints(cluster.Name)
+        if err == nil {
+            clusterInfo.Taints = taints
+        }
+        
+        // 计算负载等级
+        clusterInfo.LoadLevel = calculateLoadLevel(clusterInfo.Resources)
+        
+        resourceView.Clusters = append(resourceView.Clusters, clusterInfo)
+    }
+    
+    // 分页处理
+    start := (page - 1) * limit
+    end := start + limit
+    if start < len(resourceView.Clusters) {
+        if end > len(resourceView.Clusters) {
+            end = len(resourceView.Clusters)
+        }
+        resourceView.Clusters = resourceView.Clusters[start:end]
+    }
+    
+    return &resourceView, nil
+}
+```
+
+### 4. 实时监控数据访问
+```go
+// 获取实时监控数据
+func GetRealtimeMonitoringData() (*RealtimeMonitoringData, error) {
+    data := &RealtimeMonitoringData{
+        Timestamp: time.Now(),
+    }
+    
+    // 获取集群监控信息
+    clusters, err := getClusterMonitoringInfo()
+    if err != nil {
+        return nil, err
+    }
+    data.Clusters = clusters
+    
+    // 获取告警信息
+    alerts, err := getActiveAlerts()
+    if err != nil {
+        return nil, err
+    }
+    data.Alerts = alerts
+    
+    return data, nil
+}
+
+// 获取集群监控信息
+func getClusterMonitoringInfo() ([]ClusterMonitoringInfo, error) {
+    karmadaClient := client.InClusterKarmadaClient()
+    clusters, err := karmadaClient.ClusterV1alpha1().Clusters().List(ctx, metav1.ListOptions{})
+    if err != nil {
+        return nil, err
+    }
+    
+    var monitoringInfo []ClusterMonitoringInfo
+    
+    for _, cluster := range clusters.Items {
+        info := ClusterMonitoringInfo{
+            Name:   cluster.Name,
+            Status: string(cluster.Status.Conditions[0].Status),
+        }
+        
+        // 获取资源使用情况
+        usage, err := getResourceUsage(cluster.Name)
+        if err == nil {
+            info.Resources = usage
+        }
+        
+        monitoringInfo = append(monitoringInfo, info)
+    }
+    
+    return monitoringInfo, nil
+}
+```
+
+### 5. 事件和告警数据访问
+```go
+// 获取最近事件
+func GetRecentEvents(limit int, severity, source string) ([]EventInfo, error) {
+    // 从 Kubernetes 事件 API 获取事件
+    clientset, err := getKubernetesClient()
+    if err != nil {
+        return nil, err
+    }
+    
+    events, err := clientset.CoreV1().Events("").List(ctx, metav1.ListOptions{
+        Limit: int64(limit),
+    })
+    if err != nil {
+        return nil, err
+    }
+    
+    var eventInfos []EventInfo
+    
+    for _, event := range events.Items {
+        if severity != "" && !matchesSeverity(event, severity) {
+            continue
+        }
+        if source != "" && !matchesSource(event, source) {
+            continue
+        }
+        
+        eventInfo := EventInfo{
+            ID:        string(event.UID),
+            Timestamp: event.LastTimestamp.Time,
+            Type:      event.Type,
+            Source:    event.Source.Component,
+            Message:   event.Message,
+            Severity:  determineSeverity(event),
+            Category:  determineCategory(event),
+            Details:   buildEventDetails(event),
+        }
+        
+        eventInfos = append(eventInfos, eventInfo)
+    }
+    
+    return eventInfos, nil
+}
+
+// 获取告警规则
+func GetAlertRules() ([]AlertRule, error) {
+    // 这里可以从配置文件或数据库读取告警规则
+    // 示例实现
+    rules := []AlertRule{
+        {
+            ID:        "rule-001",
+            Name:      "CPU使用率告警",
+            Condition: "cpu_usage > 80",
+            Severity:  "warning",
+            Enabled:   true,
+        },
+        {
+            ID:        "rule-002",
+            Name:      "内存使用率告警",
+            Condition: "memory_usage > 85",
+            Severity:  "warning",
+            Enabled:   true,
+        },
+    }
+    
+    return rules, nil
+}
+```
+
+### 6. 用户偏好设置数据访问
+```go
+// 用户偏好设置接口
+type UserPreferencesStore interface {
+    GetUserPreferences(userID string) (*UserPreferences, error)
+    UpdateUserPreferences(userID string, prefs *UserPreferences) error
+}
+
+// 内存实现（生产环境可使用数据库）
+type MemoryUserPreferencesStore struct {
+    preferences map[string]*UserPreferences
+    mutex       sync.RWMutex
+}
+
+func (s *MemoryUserPreferencesStore) GetUserPreferences(userID string) (*UserPreferences, error) {
+    s.mutex.RLock()
+    defer s.mutex.RUnlock()
+    
+    if prefs, exists := s.preferences[userID]; exists {
+        return prefs, nil
+    }
+    
+    // 返回默认偏好设置
+    return &UserPreferences{
+        UserID:   userID,
+        Theme:    "light",
+        Language: "zh-CN",
+        Timezone: "Asia/Shanghai",
+        DashboardLayout: DashboardLayoutConfig{
+            Overview:        []string{"clusters", "resources", "policies"},
+            RefreshInterval: 30,
+            PageSize:        20,
+        },
+        Notifications: NotificationConfig{
+            Email:   true,
+            Browser: true,
+            Sound:   false,
+        },
+        CreatedAt: time.Now(),
+        UpdatedAt: time.Now(),
+    }, nil
+}
+
+func (s *MemoryUserPreferencesStore) UpdateUserPreferences(userID string, prefs *UserPreferences) error {
+    s.mutex.Lock()
+    defer s.mutex.Unlock()
+    
+    prefs.UserID = userID
+    prefs.UpdatedAt = time.Now()
+    
+    if s.preferences == nil {
+        s.preferences = make(map[string]*UserPreferences)
+    }
+    
+    s.preferences[userID] = prefs
+    return nil
+}
+```
+
+### 7. 审计日志数据访问
+```go
+// 审计日志存储接口
+type AuditLogStore interface {
+    LogAction(log *AuditLog) error
+    QueryLogs(query *AuditQuery) ([]AuditLog, int64, error)
+}
+
+// 文件存储实现
+type FileAuditLogStore struct {
+    logFile string
+    mutex   sync.Mutex
+}
+
+func (s *FileAuditLogStore) LogAction(log *AuditLog) error {
+    s.mutex.Lock()
+    defer s.mutex.Unlock()
+    
+    log.ID = generateLogID()
+    log.Timestamp = time.Now()
+    
+    file, err := os.OpenFile(s.logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+    if err != nil {
+        return err
+    }
+    defer file.Close()
+    
+    logData, err := json.Marshal(log)
+    if err != nil {
+        return err
+    }
+    
+    _, err = file.WriteString(string(logData) + "\n")
+    return err
+}
+
+func (s *FileAuditLogStore) QueryLogs(query *AuditQuery) ([]AuditLog, int64, error) {
+    file, err := os.Open(s.logFile)
+    if err != nil {
+        return nil, 0, err
+    }
+    defer file.Close()
+    
+    var logs []AuditLog
+    scanner := bufio.NewScanner(file)
+    
+    for scanner.Scan() {
+        var log AuditLog
+        if err := json.Unmarshal(scanner.Bytes(), &log); err != nil {
+            continue
+        }
+        
+        if matchesQuery(&log, query) {
+            logs = append(logs, log)
+        }
+    }
+    
+    // 分页处理
+    total := int64(len(logs))
+    start := (query.Page - 1) * query.Limit
+    end := start + query.Limit
+    
+    if start < int32(len(logs)) {
+        if end > int32(len(logs)) {
+            end = int32(len(logs))
+        }
+        logs = logs[start:end]
+    } else {
+        logs = []AuditLog{}
+    }
+    
+    return logs, total, nil
+}
 ```
 
 ### 3. 缓存策略
