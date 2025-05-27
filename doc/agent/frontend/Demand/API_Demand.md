@@ -4,6 +4,144 @@
 
 本文档详细列出了Karmada Dashboard前端应用所需的后端API接口。这些接口是实现完整的多云管理功能的关键依赖。
 
+## **🚨 新增紧急需求接口（最高优先级）**
+
+### 系统事件告警真实数据接口
+
+**当前问题**: 前端概览页面的系统事件告警组件目前使用模拟数据显示，无法提供真实的系统事件信息。
+
+**接口**: `GET /api/v1/events/recent`
+
+**描述**: 获取真实的系统事件和告警信息，替换当前的模拟数据
+
+**参数**:
+```json
+{
+  "limit": 20,
+  "severity": "info|warning|error",  // 可选，严重程度过滤
+  "source": "string",                // 可选，事件源过滤
+  "startTime": "2024-01-15T10:00:00Z", // 可选，开始时间
+  "endTime": "2024-01-15T11:00:00Z"   // 可选，结束时间
+}
+```
+
+**期望响应**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "events": [
+      {
+        "id": "event-001",
+        "timestamp": "2024-01-15T10:30:00Z",
+        "type": "Warning|Error|Info",
+        "source": "cluster-beijing|karmada-controller|etcd|node-xxx",
+        "message": "具体的事件描述信息",
+        "severity": "low|medium|high",
+        "category": "resource|policy|network|storage|scheduling",
+        "details": {
+          "node": "node-001",
+          "cpuUsage": 85.5,
+          "memoryUsage": 78.2
+          // 其他相关详细信息
+        }
+      }
+    ],
+    "total": 125
+  }
+}
+```
+
+**关键字段说明**:
+- `type`: 事件类型（Warning、Error、Info）
+- `source`: 事件来源（集群名、组件名、节点名等）
+- `severity`: 严重程度（low、medium、high）
+- `category`: 事件分类（resource、policy、network、storage、scheduling）
+- `details`: 事件相关的详细信息，根据不同类型事件包含不同字段
+
+**业务需求**:
+1. 显示系统中真实发生的各类事件
+2. 支持按严重程度和来源过滤
+3. 提供事件详细信息用于问题诊断
+4. 支持分页和时间范围查询
+5. 实时更新（建议1分钟刷新间隔）
+
+**用途**: 
+- 概览页面系统事件告警卡片显示
+- 系统监控和故障诊断
+- 运维人员及时获取系统状态变化
+
+### 系统健康状态真实数据接口
+
+**当前问题**: 前端概览页面的系统健康状态组件目前也使用模拟数据显示，无法提供真实的系统健康状态信息。
+
+**接口**: `GET /api/v1/health/detailed`
+
+**描述**: 获取真实的系统健康状态信息，替换当前的模拟数据
+
+**期望响应**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "overall": "healthy|warning|error",
+    "components": [
+      {
+        "name": "karmada-apiserver",
+        "status": "healthy|warning|error",
+        "message": "API服务器运行正常",
+        "lastCheck": "2024-01-15T10:30:00Z"
+      },
+      {
+        "name": "karmada-controller-manager",
+        "status": "healthy|warning|error",
+        "message": "控制器管理器运行正常",
+        "lastCheck": "2024-01-15T10:30:00Z"
+      }
+    ],
+    "dependencies": [
+      {
+        "name": "etcd",
+        "status": "healthy|warning|error",
+        "latency": "2ms",
+        "message": "数据存储服务正常"
+      },
+      {
+        "name": "member-clusters",
+        "status": "healthy|warning|error",
+        "message": "3/3 集群健康",
+        "details": {
+          "healthy": ["cluster-beijing", "cluster-shanghai", "cluster-shenzhen"],
+          "unhealthy": []
+        }
+      }
+    ]
+  }
+}
+```
+
+**关键字段说明**:
+- `overall`: 系统整体健康状态
+- `components`: 各个系统组件的健康状态
+- `dependencies`: 依赖服务的健康状态
+- `latency`: 服务响应延迟
+- `details`: 详细的健康状态信息
+
+**业务需求**:
+1. 显示系统各组件的真实健康状态
+2. 提供系统依赖服务的监控信息
+3. 支持实时健康状态检查
+4. 提供故障诊断所需的详细信息
+
+**用途**: 
+- 概览页面系统健康状态卡片显示
+- 系统运维监控
+- 故障快速定位和诊断
+
+---
+
 ## 紧急需求接口（高优先级）
 
 ### 1. 概览页面 - 集群资源视图接口
@@ -202,31 +340,7 @@
 - 提供实时的资源使用率变化
 - 集群状态变更通知
 
-### 2. 告警和事件接口
-
-**接口**: `GET /api/v1/events/recent`
-
-**描述**: 获取最近的系统事件和告警信息
-
-**期望响应**:
-```json
-{
-  "code": 200,
-  "data": {
-    "events": [
-      {
-        "timestamp": "2024-01-15T10:30:00Z",
-        "type": "Warning",
-        "source": "cluster-beijing",
-        "message": "节点资源使用率过高",
-        "severity": "medium"
-      }
-    ]
-  }
-}
-```
-
-### 3. 策略模板接口
+### 2. 策略模板接口
 
 **接口**: `GET /api/v1/policy/templates`
 
@@ -334,7 +448,12 @@ User-ID: <user-id>
 
 ---
 
-**文档版本**: v1.0  
+**文档版本**: v1.1  
 **创建时间**: 2024-01-15  
-**最后更新**: 2024-01-15  
+**最后更新**: 2024-05-26  
 **负责人**: 前端开发团队
+
+## 更新记录
+
+- **v1.1 (2024-05-26)**: 新增系统事件告警和健康状态接口紧急需求，当前前端使用模拟数据
+- **v1.0 (2024-01-15)**: 初始版本

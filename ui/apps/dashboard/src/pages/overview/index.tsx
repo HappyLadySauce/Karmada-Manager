@@ -33,6 +33,10 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { GetOverview } from '@/services/overview.ts';
 import { GetClusterResources, ClusterResource } from '@/services/cluster.ts';
+import { GetMonitoringRealtime, GetRecentEvents } from '@/services/monitoring.ts';
+import { GetDetailedHealthStatus } from '@/services/health.ts';
+import EventAlertCard from '@/components/monitoring/EventAlertCard';
+import HealthStatusCard from '@/components/monitoring/HealthStatusCard';
 import dayjs from 'dayjs';
 import {
   ClusterOutlined,
@@ -209,67 +213,72 @@ const ClusterCard: React.FC<{ cluster: ClusterResource }> = ({ cluster }) => {
             </div>
             <div style={{ textAlign: 'right' }}>
               {cluster.location && (
-                <Text type="secondary" style={{ fontSize: 11, display: 'block' }}>
+                <Text type="secondary" style={{ fontSize: 12, display: 'block' }}>
                   {cluster.location.city}, {cluster.location.country}
                 </Text>
               )}
               {cluster.region && (
-                <Text type="secondary" style={{ fontSize: 10 }}>
+                <Text type="secondary" style={{ fontSize: 11 }}>
                   {cluster.region}
                 </Text>
               )}
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <Text style={{ color: getStatusColor(cluster.status), fontSize: 12, fontWeight: 500 }}>
+            <Text style={{ color: getStatusColor(cluster.status), fontSize: 13, fontWeight: 500 }}>
               {getStatusText(cluster.status)}
             </Text>
             {cluster.zone && (
-              <Tag style={{ fontSize: 10 }}>
+              <Tag style={{ fontSize: 11, padding: '0 6px' }}>
                 {cluster.zone}
               </Tag>
             )}
             {cluster.version && (
-              <Tag color="blue" style={{ fontSize: 10 }}>
+              <Tag color="blue" style={{ fontSize: 11, padding: '0 6px' }}>
                 {cluster.version}
               </Tag>
             )}
           </div>
           {cluster.joinedTime && (
-            <Text type="secondary" style={{ fontSize: 10 }}>
+            <Text type="secondary" style={{ fontSize: 11 }}>
               {formatJoinedTime(cluster.joinedTime)}
             </Text>
           )}
         </div>
 
         {/* 关键指标 */}
-        <Row gutter={[8, 8]} style={{ marginBottom: 16 }}>
+        <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
           <Col span={8} style={{ textAlign: 'center' }}>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1890ff' }}>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1890ff' }}>
               {cluster.nodeCount}
             </Text>
-            <div style={{ fontSize: 10, color: '#666' }}>节点</div>
+            <div style={{ fontSize: 12, color: '#666', fontWeight: 500 }}>节点</div>
           </Col>
           <Col span={8} style={{ textAlign: 'center' }}>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#52c41a' }}>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#52c41a' }}>
               {cluster.podCount}
             </Text>
-            <div style={{ fontSize: 10, color: '#666' }}>Pod</div>
+            <div style={{ fontSize: 12, color: '#666', fontWeight: 500 }}>Pod</div>
           </Col>
           <Col span={8} style={{ textAlign: 'center' }}>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#722ed1' }}>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#722ed1' }}>
               {cluster.availability}%
             </Text>
-            <div style={{ fontSize: 10, color: '#666' }}>可用性</div>
+            <div style={{ fontSize: 12, color: '#666', fontWeight: 500 }}>可用性</div>
           </Col>
         </Row>
 
-        {/* 资源使用率 */}
+        {/* 资源使用率和详细信息 */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ marginBottom: 8 }}>
+          <div style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <Text style={{ fontSize: 12, color: '#666' }}>CPU</Text>
-              <Text style={{ fontSize: 12, fontWeight: 500 }}>{cpuPercent}%</Text>
+              <Text style={{ fontSize: 13, color: '#666', fontWeight: 500 }}>CPU</Text>
+              <div style={{ textAlign: 'right' }}>
+                <Text style={{ fontSize: 13, fontWeight: 600 }}>{cpuPercent}%</Text>
+                <Text style={{ fontSize: 11, color: '#999', marginLeft: 4 }}>
+                  ({cluster.resources.cpu.allocated}/{cluster.resources.cpu.allocatable})
+                </Text>
+              </div>
             </div>
             <Progress 
               percent={cpuPercent} 
@@ -279,10 +288,16 @@ const ClusterCard: React.FC<{ cluster: ClusterResource }> = ({ cluster }) => {
               showInfo={false}
             />
           </div>
-          <div>
+          <div style={{ marginBottom: 10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <Text style={{ fontSize: 12, color: '#666' }}>内存</Text>
-              <Text style={{ fontSize: 12, fontWeight: 500 }}>{memoryPercent}%</Text>
+              <Text style={{ fontSize: 13, color: '#666', fontWeight: 500 }}>内存</Text>
+              <div style={{ textAlign: 'right' }}>
+                <Text style={{ fontSize: 13, fontWeight: 600 }}>{memoryPercent}%</Text>
+                <Text style={{ fontSize: 11, color: '#999', marginLeft: 4 }}>
+                  ({(cluster.resources.memory.allocated / 1024 / 1024 / 1024).toFixed(1)}GB/
+                  {(cluster.resources.memory.allocatable / 1024 / 1024 / 1024).toFixed(1)}GB)
+                </Text>
+              </div>
             </div>
             <Progress 
               percent={memoryPercent} 
@@ -292,24 +307,46 @@ const ClusterCard: React.FC<{ cluster: ClusterResource }> = ({ cluster }) => {
               showInfo={false}
             />
           </div>
+          {/* 网络和存储信息 */}
+          <div style={{ 
+            backgroundColor: '#f8f9fa', 
+            padding: '8px 10px', 
+            borderRadius: '6px',
+            marginBottom: 8
+          }}>
+            <Row gutter={8}>
+              <Col span={12}>
+                <Text style={{ fontSize: 11, color: '#666' }}>网络策略: </Text>
+                <Text style={{ fontSize: 11, fontWeight: 500 }}>
+                  {cluster.capabilities?.includes('NetworkPolicy') ? '支持' : '不支持'}
+                </Text>
+              </Col>
+              <Col span={12}>
+                <Text style={{ fontSize: 11, color: '#666' }}>存储类: </Text>
+                <Text style={{ fontSize: 11, fontWeight: 500 }}>
+                  {cluster.capabilities?.length || 0}个
+                </Text>
+              </Col>
+            </Row>
+          </div>
         </div>
 
         {/* 集群能力和特性 */}
         {cluster.capabilities && cluster.capabilities.length > 0 && (
           <div style={{ marginBottom: 8 }}>
-            <Text style={{ fontSize: 10, color: '#666', display: 'block', marginBottom: 4 }}>集群能力:</Text>
+            <Text style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4, fontWeight: 500 }}>集群能力:</Text>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {cluster.capabilities.slice(0, 3).map((capability, index) => (
                 <Tag 
                   key={index} 
                   color="cyan"
-                  style={{ fontSize: 9 }}
+                  style={{ fontSize: 11, padding: '0 6px' }}
                 >
                   {capability}
                 </Tag>
               ))}
               {cluster.capabilities.length > 3 && (
-                <Text style={{ fontSize: 9, color: '#999' }}>+{cluster.capabilities.length - 3}</Text>
+                <Text style={{ fontSize: 11, color: '#999' }}>+{cluster.capabilities.length - 3}</Text>
               )}
             </div>
           </div>
@@ -318,14 +355,14 @@ const ClusterCard: React.FC<{ cluster: ClusterResource }> = ({ cluster }) => {
         {/* 标签 */}
         {cluster.labels && Object.keys(cluster.labels).length > 0 && (
           <div style={{ marginBottom: 8 }}>
-            <Text style={{ fontSize: 10, color: '#666', display: 'block', marginBottom: 4 }}>标签:</Text>
+            <Text style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4, fontWeight: 500 }}>标签:</Text>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {Object.entries(cluster.labels).slice(0, 3).map(([key, value]) => (
                 <Tag 
                   key={key} 
                   style={{ 
-                    fontSize: 9, 
-                    padding: '0 4px',
+                    fontSize: 11, 
+                    padding: '0 6px',
                     backgroundColor: '#e0e7ff',
                     color: '#4338ca',
                     border: 'none'
@@ -335,7 +372,7 @@ const ClusterCard: React.FC<{ cluster: ClusterResource }> = ({ cluster }) => {
                 </Tag>
               ))}
               {Object.keys(cluster.labels).length > 3 && (
-                <Text style={{ fontSize: 9, color: '#999' }}>+{Object.keys(cluster.labels).length - 3}</Text>
+                <Text style={{ fontSize: 11, color: '#999' }}>+{Object.keys(cluster.labels).length - 3}</Text>
               )}
             </div>
           </div>
@@ -344,19 +381,19 @@ const ClusterCard: React.FC<{ cluster: ClusterResource }> = ({ cluster }) => {
         {/* 污点信息（如果有） */}
         {cluster.taints && cluster.taints.length > 0 && (
           <div>
-            <Text style={{ fontSize: 10, color: '#666', display: 'block', marginBottom: 4 }}>污点:</Text>
+            <Text style={{ fontSize: 12, color: '#666', display: 'block', marginBottom: 4, fontWeight: 500 }}>污点:</Text>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
               {cluster.taints.slice(0, 2).map((taint, index) => (
                 <Tag 
                   key={index} 
                   color="orange"
-                  style={{ fontSize: 9 }}
+                  style={{ fontSize: 11, padding: '0 6px' }}
                 >
                   {taint.key}
                 </Tag>
               ))}
               {cluster.taints.length > 2 && (
-                <Text style={{ fontSize: 9, color: '#999' }}>+{cluster.taints.length - 2}</Text>
+                <Text style={{ fontSize: 11, color: '#999' }}>+{cluster.taints.length - 2}</Text>
               )}
             </div>
           </div>
@@ -419,6 +456,210 @@ const Overview = () => {
     retry: 3, // 重试3次
     retryDelay: 1000, // 重试延迟1秒
   });
+
+  // 获取实时监控数据
+  const { data: monitoringData, isLoading: monitoringLoading, refetch: refetchMonitoring } = useQuery({
+    queryKey: ['GetMonitoringRealtime'],
+    queryFn: async () => {
+      try {
+        const ret = await GetMonitoringRealtime({
+          type: 'all',
+          interval: 30
+        });
+        return ret.data;
+      } catch (error) {
+        console.error('获取实时监控数据失败:', error);
+        throw error;
+      }
+    },
+    refetchInterval: 30000, // 30秒自动刷新
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  // 获取最近事件
+  const { data: eventsData, isLoading: eventsLoading, refetch: refetchEvents } = useQuery({
+    queryKey: ['GetRecentEvents'],
+    queryFn: async () => {
+      try {
+        const ret = await GetRecentEvents({
+          limit: 20,
+        });
+        return ret.data;
+      } catch (error) {
+        console.error('获取事件数据失败:', error);
+        throw error;
+      }
+    },
+    refetchInterval: 60000, // 1分钟刷新
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  // 创建模拟事件数据（当后端没有数据时使用）
+  const mockEventsData = {
+    events: [
+      {
+        id: 'event-001',
+        timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(), // 5分钟前
+        type: 'Warning',
+        source: 'cluster-beijing',
+        message: '集群节点 node-001 CPU 使用率达到 85%，建议检查工作负载分布',
+        severity: 'medium' as const,
+        category: 'resource',
+        details: {
+          node: 'node-001',
+          cpuUsage: 85.5,
+          memoryUsage: 78.2
+        }
+      },
+      {
+        id: 'event-002',
+        timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(), // 15分钟前
+        type: 'Info',
+        source: 'karmada-controller',
+        message: '传播策略 nginx-policy 已成功应用到 3 个集群',
+        severity: 'low' as const,
+        category: 'policy',
+        details: {
+          policy: 'nginx-policy',
+          clusters: ['cluster-beijing', 'cluster-shanghai', 'cluster-shenzhen']
+        }
+      },
+      {
+        id: 'event-003',
+        timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30分钟前
+        type: 'Error',
+        source: 'cluster-shenzhen',
+        message: '集群连接失败，网络超时，正在尝试重新连接',
+        severity: 'high' as const,
+        category: 'network',
+        details: {
+          error: 'Connection timeout',
+          retryCount: 3
+        }
+      },
+      {
+        id: 'event-004',
+        timestamp: new Date(Date.now() - 45 * 60 * 1000).toISOString(), // 45分钟前
+        type: 'Warning',
+        source: 'etcd',
+        message: 'etcd 存储空间使用率超过 70%，建议清理旧数据',
+        severity: 'medium' as const,
+        category: 'storage',
+        details: {
+          usage: 72.5,
+          threshold: 70
+        }
+      },
+      {
+        id: 'event-005',
+        timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(), // 1小时前
+        type: 'Info',
+        source: 'karmada-scheduler',
+        message: '工作负载 web-app 已成功调度到最优集群',
+        severity: 'low' as const,
+        category: 'scheduling',
+        details: {
+          workload: 'web-app',
+          targetCluster: 'cluster-beijing',
+          reason: 'resource availability'
+        }
+      },
+      {
+        id: 'event-006',
+        timestamp: new Date(Date.now() - 90 * 60 * 1000).toISOString(), // 1.5小时前
+        type: 'Warning',
+        source: 'cluster-shanghai',
+        message: '检测到节点 node-003 磁盘空间不足，剩余空间少于 10%',
+        severity: 'medium' as const,
+        category: 'resource',
+        details: {
+          node: 'node-003',
+          diskUsage: 92.3,
+          freeSpace: '7.8GB'
+        }
+      }
+    ],
+    total: 6
+  };
+
+  // 使用实际数据或模拟数据
+  const finalEventsData = (eventsData?.events && eventsData.events.length > 0) ? eventsData : mockEventsData;
+
+  // 获取健康状态数据
+  const { data: healthData, isLoading: healthLoading, refetch: refetchHealth } = useQuery({
+    queryKey: ['GetDetailedHealthStatus'],
+    queryFn: async () => {
+      try {
+        const ret = await GetDetailedHealthStatus();
+        return ret.data;
+      } catch (error) {
+        console.error('获取健康状态失败:', error);
+        throw error;
+      }
+    },
+    refetchInterval: 60000, // 1分钟刷新
+    retry: 3,
+    retryDelay: 1000,
+  });
+
+  // 创建模拟健康状态数据（当后端没有数据时使用）
+  const mockHealthData = {
+    overall: 'healthy' as 'healthy' | 'warning' | 'error',
+    components: [
+      {
+        name: 'karmada-apiserver',
+        status: 'healthy' as 'healthy' | 'warning' | 'error',
+        message: 'API服务器运行正常',
+        lastCheck: new Date().toISOString()
+      },
+      {
+        name: 'karmada-controller-manager',
+        status: 'healthy' as 'healthy' | 'warning' | 'error',
+        message: '控制器管理器运行正常',
+        lastCheck: new Date().toISOString()
+      },
+      {
+        name: 'karmada-scheduler',
+        status: 'healthy' as 'healthy' | 'warning' | 'error',
+        message: '调度器运行正常',
+        lastCheck: new Date().toISOString()
+      },
+      {
+        name: 'karmada-webhook',
+        status: 'warning' as 'healthy' | 'warning' | 'error',
+        message: 'Webhook服务响应缓慢',
+        lastCheck: new Date().toISOString()
+      }
+    ],
+    dependencies: [
+      {
+        name: 'etcd',
+        status: 'healthy' as 'healthy' | 'partial' | 'error',
+        latency: '2ms',
+        message: '数据存储服务正常'
+      },
+      {
+        name: 'member-clusters',
+        status: 'partial' as 'healthy' | 'partial' | 'error',
+        message: '2/3 集群健康',
+        details: {
+          healthy: ['cluster-beijing', 'cluster-shanghai'],
+          unhealthy: ['cluster-shenzhen']
+        }
+      },
+      {
+        name: 'network',
+        status: 'healthy' as 'healthy' | 'partial' | 'error',
+        latency: '15ms',
+        message: '网络连接正常'
+      }
+    ]
+  };
+
+  // 使用实际数据或模拟数据
+  const finalHealthData = healthData || mockHealthData;
 
   // 计算资源使用率
   const cpuUsagePercent = data?.memberClusterStatus?.cpuSummary
@@ -505,7 +746,7 @@ const Overview = () => {
               <div className="header-content">
                 <div className="title-section">
                   <Avatar 
-                    size={56} 
+                    size={64} 
                     icon={<DashboardOutlined />}
                     style={{ 
                       background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
@@ -513,12 +754,12 @@ const Overview = () => {
                     }}
                   />
                   <div>
-                    <Title level={2} className="page-title" style={{ marginBottom: 4, fontSize: '24px' }}>
+                    <Title level={2} className="page-title" style={{ marginBottom: 8, fontSize: '28px' }}>
                       系统概览
                     </Title>
-                    <Paragraph className="page-subtitle" style={{ marginBottom: 0, fontSize: 14 }}>
+                    <Paragraph className="page-subtitle" style={{ marginBottom: 0, fontSize: 16 }}>
                       Karmada 多云管理平台运行状态和资源监控
-                      <Tag color="blue" style={{ marginLeft: 12 }}>
+                      <Tag color="blue" style={{ marginLeft: 12, fontSize: '13px' }}>
                         实时监控
                       </Tag>
                     </Paragraph>
@@ -531,6 +772,9 @@ const Overview = () => {
                     onClick={() => {
                       refetch();
                       refetchClusters();
+                      refetchMonitoring();
+                      refetchEvents();
+                      refetchHealth();
                     }}
                     size="large"
                     style={{
@@ -552,67 +796,72 @@ const Overview = () => {
               <Col xs={24} lg={8}>
                               <Card 
                 className="modern-card stats-card"
-                style={{ height: '100%' }}
-                styles={{ body: { padding: '16px' } }}
+                style={{ 
+                  height: '100%',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  border: '1px solid rgba(0,0,0,0.06)'
+                }}
+                styles={{ body: { padding: '20px' } }}
                   title={
                     <div className="card-header" style={{ marginBottom: 0 }}>
-                      <div className="header-icon-wrapper" style={{ width: 32, height: 32, fontSize: 16 }}>
+                      <div className="header-icon-wrapper" style={{ width: 36, height: 36, fontSize: 18 }}>
                         <CloudServerOutlined className="header-icon" />
                       </div>
                       <div className="header-text">
-                        <Title level={5} className="card-title" style={{ fontSize: '16px', marginBottom: '4px' }}>
+                        <Title level={5} className="card-title" style={{ fontSize: '18px', marginBottom: '6px' }}>
                           系统信息
                         </Title>
-                        <Text type="secondary" style={{ fontSize: '12px' }}>Karmada 多云管理平台状态</Text>
+                        <Text type="secondary" style={{ fontSize: '14px' }}>Karmada 多云管理平台状态</Text>
                       </div>
                     </div>
                   }
                 >
-                  <Space direction="vertical" style={{ width: '100%' }} size="small">
-                    <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
-                      <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 14 }}>
+                  <Space direction="vertical" style={{ width: '100%' }} size={16}>
+                    <div className="stat-item gradient-primary" style={{ padding: '14px' }}>
+                      <div className="stat-icon" style={{ width: 36, height: 36, fontSize: 16 }}>
                         <CloudServerOutlined />
                       </div>
                       <div className="stat-content">
-                        <Text className="stat-label" style={{ fontSize: '12px' }}>Karmada版本</Text>
-                        <Text className="stat-value" style={{ fontSize: '16px' }}>
+                        <Text className="stat-label" style={{ fontSize: '14px' }}>Karmada版本</Text>
+                        <Text className="stat-value" style={{ fontSize: '18px', fontWeight: 600 }}>
                           {data?.karmadaInfo?.version?.gitVersion || 'v1.8.0'}
                         </Text>
                       </div>
                       <div style={{ marginLeft: 'auto' }}>
-                        <Tag color="green">稳定版本</Tag>
+                        <Tag color="green" style={{ fontSize: '12px' }}>稳定版本</Tag>
                       </div>
                     </div>
 
-                    <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
-                      <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 14 }}>
+                    <div className="stat-item gradient-primary" style={{ padding: '14px' }}>
+                      <div className="stat-icon" style={{ width: 36, height: 36, fontSize: 16 }}>
                         <healthStatus.icon />
                       </div>
                       <div className="stat-content">
-                        <Text className="stat-label" style={{ fontSize: '12px' }}>运行状态</Text>
-                        <Text className="stat-value" style={{ fontSize: '16px', color: healthStatus.textColor }}>
+                        <Text className="stat-label" style={{ fontSize: '14px' }}>运行状态</Text>
+                        <Text className="stat-value" style={{ fontSize: '18px', fontWeight: 600, color: healthStatus.textColor }}>
                           {healthStatus.text}
                         </Text>
                       </div>
                       <div style={{ marginLeft: 'auto' }}>
-                        <Badge status={healthStatus.color as any} text="系统正常" />
+                        <Badge status={healthStatus.color as any} text="系统正常" style={{ fontSize: '13px' }} />
                       </div>
                     </div>
 
-                    <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
-                      <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 14 }}>
+                    <div className="stat-item gradient-primary" style={{ padding: '14px' }}>
+                      <div className="stat-icon" style={{ width: 36, height: 36, fontSize: 16 }}>
                         <DatabaseOutlined />
                       </div>
                       <div className="stat-content">
-                        <Text className="stat-label" style={{ fontSize: '12px' }}>运行时长</Text>
-                        <Text className="stat-value" style={{ fontSize: '16px' }}>
+                        <Text className="stat-label" style={{ fontSize: '14px' }}>运行时长</Text>
+                        <Text className="stat-value" style={{ fontSize: '18px', fontWeight: 600 }}>
                           {(data?.karmadaInfo?.createTime &&
                             dayjs().diff(dayjs(data.karmadaInfo.createTime), 'day')) ||
                             '30'} 天
                         </Text>
                       </div>
                       <div style={{ marginLeft: 'auto' }}>
-                        <Text type="secondary" style={{ fontSize: 14 }}>
+                        <Text type="secondary" style={{ fontSize: '14px' }}>
                           {(data?.karmadaInfo?.createTime &&
                             dayjs(data.karmadaInfo.createTime).format('YYYY-MM-DD')) ||
                             '2024-01-01'}
@@ -620,13 +869,13 @@ const Overview = () => {
                       </div>
                     </div>
 
-                    <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
-                      <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 14 }}>
+                    <div className="stat-item gradient-primary" style={{ padding: '14px' }}>
+                      <div className="stat-icon" style={{ width: 36, height: 36, fontSize: 16 }}>
                         <TeamOutlined />
                       </div>
                       <div className="stat-content">
-                        <Text className="stat-label" style={{ fontSize: '12px' }}>集群节点</Text>
-                        <Text className="stat-value" style={{ fontSize: '16px' }}>
+                        <Text className="stat-label" style={{ fontSize: '14px' }}>集群节点</Text>
+                        <Text className="stat-value" style={{ fontSize: '18px', fontWeight: 600 }}>
                           {`${data?.memberClusterStatus?.nodeSummary?.readyNum || 0}/${data?.memberClusterStatus?.nodeSummary?.totalNum || 0}`}
                         </Text>
                       </div>
@@ -635,17 +884,17 @@ const Overview = () => {
                           percent={nodeUsagePercent} 
                           size="default" 
                           strokeColor="#a855f7"
-                          style={{ width: 130, marginLeft: 16 }}
+                          style={{ width: 140, marginLeft: 16 }}
                         />
                       </div>
                     </div>
 
-                    <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
+                    <div className="stat-item gradient-primary" style={{ padding: '14px' }}>
                       <div className="stat-content">
                         {/* 欢迎的图标和文字 */}
-                        <Text className="stat-value" style={{ fontSize: '16px', color: '#4f46e5', fontWeight: 500, display: 'flex', alignItems: 'center' }}>
-                          <DashboardOutlined style={{ marginRight: 8, fontSize: 20 }} />
-                          <span style={{ fontSize: 16, fontWeight: 500 }}>Karmada管理员，欢迎回来！</span>
+                        <Text className="stat-value" style={{ fontSize: '18px', color: '#4f46e5', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                          <DashboardOutlined style={{ marginRight: 12, fontSize: 24 }} />
+                          <span style={{ fontSize: 18, fontWeight: 600 }}>Karmada管理员，欢迎回来！</span>
                         </Text>
                       </div>
                     </div>
@@ -660,17 +909,22 @@ const Overview = () => {
                   <Col span={24}>
                     <Card 
                       className="modern-card chart-card" 
-                      styles={{ body: { padding: '16px' } }}
+                      style={{
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                        border: '1px solid rgba(0,0,0,0.06)'
+                      }}
+                      styles={{ body: { padding: '20px' } }}
                       title={
                         <div className="card-header" style={{ marginBottom: 0 }}>
-                          <div className="header-icon-wrapper" style={{ width: 32, height: 32, fontSize: 16 }}>
+                          <div className="header-icon-wrapper" style={{ width: 36, height: 36, fontSize: 18 }}>
                             <BarChartOutlined className="header-icon" />
                           </div>
                           <div className="header-text">
-                            <Title level={5} className="card-title" style={{ fontSize: '16px', marginBottom: '4px' }}>
+                            <Title level={5} className="card-title" style={{ fontSize: '18px', marginBottom: '6px' }}>
                               集群资源使用情况
                             </Title>
-                            <Text type="secondary" style={{ fontSize: '12px' }}>实时监控集群资源分配状态</Text>
+                            <Text type="secondary" style={{ fontSize: '14px' }}>实时监控集群资源分配状态</Text>
                           </div>
                         </div>
                       }
@@ -680,15 +934,15 @@ const Overview = () => {
                         </Tag>
                       }
                     >
-                      <Space direction="vertical" style={{ width: '100%' }} size="small">
-                        <div className="resource-item" style={{ padding: '12px' }}>
+                      <Space direction="vertical" style={{ width: '100%' }} size={16}>
+                        <div className="resource-item" style={{ padding: '16px' }}>
                           <div className="resource-header">
                             <Space>
-                              <ThunderboltOutlined className="resource-icon cpu" />
-                              <Text strong className="resource-label" style={{ fontSize: '14px' }}>CPU 使用率</Text>
-                              <Tag color="blue">{cpuUsagePercent}%</Tag>
+                              <ThunderboltOutlined className="resource-icon cpu" style={{ fontSize: '18px' }} />
+                              <Text strong className="resource-label" style={{ fontSize: '16px' }}>CPU 使用率</Text>
+                              <Tag color="blue" style={{ fontSize: '13px', padding: '4px 8px' }}>{cpuUsagePercent}%</Tag>
                             </Space>
-                            <Text className="resource-value" style={{ fontSize: '12px' }}>
+                            <Text className="resource-value" style={{ fontSize: '14px' }}>
                               {data?.memberClusterStatus?.cpuSummary?.allocatedCPU?.toFixed(2) || 0} / 
                               {data?.memberClusterStatus?.cpuSummary?.totalCPU || 0} Cores
                             </Text>
@@ -703,14 +957,14 @@ const Overview = () => {
                           />
                         </div>
 
-                        <div className="resource-item" style={{ padding: '12px' }}>
+                        <div className="resource-item" style={{ padding: '16px' }}>
                           <div className="resource-header">
                             <Space>
-                              <DatabaseOutlined className="resource-icon memory" />
-                              <Text strong className="resource-label" style={{ fontSize: '14px' }}>内存使用率</Text>
-                              <Tag color="green">{memoryUsagePercent}%</Tag>
+                              <DatabaseOutlined className="resource-icon memory" style={{ fontSize: '18px' }} />
+                              <Text strong className="resource-label" style={{ fontSize: '16px' }}>内存使用率</Text>
+                              <Tag color="green" style={{ fontSize: '13px', padding: '4px 8px' }}>{memoryUsagePercent}%</Tag>
                             </Space>
-                            <Text className="resource-value" style={{ fontSize: '12px' }}>
+                            <Text className="resource-value" style={{ fontSize: '14px' }}>
                               {data?.memberClusterStatus?.memorySummary?.allocatedMemory ? 
                                 (data.memberClusterStatus.memorySummary.allocatedMemory / 1024 / 1024 / 1024).toFixed(2) : 0}GB / 
                               {data?.memberClusterStatus?.memorySummary?.totalMemory ? 
@@ -734,17 +988,22 @@ const Overview = () => {
                   <Col span={24}>
                     <Card 
                       className="modern-card stats-card"
-                      styles={{ body: { padding: '12px' } }}
+                      style={{
+                        borderRadius: '12px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                        border: '1px solid rgba(0,0,0,0.06)'
+                      }}
+                      styles={{ body: { padding: '20px' } }}
                       title={
                         <div className="card-header" style={{ marginBottom: 0 }}>
-                          <div className="header-icon-wrapper" style={{ width: 32, height: 32, fontSize: 16 }}>
+                          <div className="header-icon-wrapper" style={{ width: 36, height: 36, fontSize: 18 }}>
                             <SafetyOutlined className="header-icon" />
                           </div>
                           <div className="header-text">
-                            <Title level={5} className="card-title" style={{ fontSize: '16px', marginBottom: '4px' }}>
+                            <Title level={5} className="card-title" style={{ fontSize: '18px', marginBottom: '6px' }}>
                               策略与资源统计
                             </Title>
-                            <Text type="secondary" style={{ fontSize: '12px' }}>多云策略配置和资源分布状态</Text>
+                            <Text type="secondary" style={{ fontSize: '14px' }}>多云策略配置和资源分布状态</Text>
                           </div>
                         </div>
                       }
@@ -764,13 +1023,13 @@ const Overview = () => {
                     >
                       <Row gutter={[8, 8]}>
                         <Col xs={12} sm={8} md={4}>
-                          <div className="stat-item gradient-primary" style={{ padding: '8px' }}>
-                            <div className="stat-icon" style={{ width: 28, height: 28, fontSize: 12 }}>
+                          <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
+                            <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 16 }}>
                               <SettingOutlined />
                             </div>
                             <div className="stat-content">
-                              <Text className="stat-label" style={{ fontSize: '11px' }}>调度策略</Text>
-                              <Text className="stat-value" style={{ fontSize: '14px' }}>
+                              <Text className="stat-label" style={{ fontSize: '13px' }}>调度策略</Text>
+                              <Text className="stat-value" style={{ fontSize: '18px', fontWeight: 600 }}>
                                 {data?.clusterResourceStatus?.propagationPolicyNum || 0}
                               </Text>
                             </div>
@@ -778,13 +1037,13 @@ const Overview = () => {
                         </Col>
 
                         <Col xs={12} sm={8} md={4}>
-                          <div className="stat-item gradient-success" style={{ padding: '8px' }}>
-                            <div className="stat-icon" style={{ width: 28, height: 28, fontSize: 12 }}>
+                          <div className="stat-item gradient-success" style={{ padding: '12px' }}>
+                            <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 16 }}>
                               <SettingOutlined />
                             </div>
                             <div className="stat-content">
-                              <Text className="stat-label" style={{ fontSize: '11px' }}>差异化策略</Text>
-                              <Text className="stat-value" style={{ fontSize: '14px' }}>
+                              <Text className="stat-label" style={{ fontSize: '13px' }}>差异化策略</Text>
+                              <Text className="stat-value" style={{ fontSize: '18px', fontWeight: 600 }}>
                                 {data?.clusterResourceStatus?.overridePolicyNum || 0}
                               </Text>
                             </div>
@@ -792,13 +1051,13 @@ const Overview = () => {
                         </Col>
 
                         <Col xs={12} sm={8} md={4}>
-                          <div className="stat-item gradient-primary" style={{ padding: '8px' }}>
-                            <div className="stat-icon" style={{ width: 28, height: 28, fontSize: 12 }}>
+                          <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
+                            <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 16 }}>
                               <DatabaseOutlined />
                             </div>
                             <div className="stat-content">
-                              <Text className="stat-label" style={{ fontSize: '11px' }}>命名空间</Text>
-                              <Text className="stat-value" style={{ fontSize: '14px' }}>
+                              <Text className="stat-label" style={{ fontSize: '13px' }}>命名空间</Text>
+                              <Text className="stat-value" style={{ fontSize: '18px', fontWeight: 600 }}>
                                 {data?.clusterResourceStatus?.namespaceNum || 0}
                               </Text>
                             </div>
@@ -806,13 +1065,13 @@ const Overview = () => {
                         </Col>
 
                         <Col xs={12} sm={8} md={4}>
-                          <div className="stat-item gradient-success" style={{ padding: '8px' }}>
-                            <div className="stat-icon" style={{ width: 28, height: 28, fontSize: 12 }}>
+                          <div className="stat-item gradient-success" style={{ padding: '12px' }}>
+                            <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 16 }}>
                               <ClusterOutlined />
                             </div>
                             <div className="stat-content">
-                              <Text className="stat-label" style={{ fontSize: '11px' }}>工作负载</Text>
-                              <Text className="stat-value" style={{ fontSize: '14px' }}>
+                              <Text className="stat-label" style={{ fontSize: '13px' }}>工作负载</Text>
+                              <Text className="stat-value" style={{ fontSize: '18px', fontWeight: 600 }}>
                                 {data?.clusterResourceStatus?.workloadNum || 0}
                               </Text>
                             </div>
@@ -820,13 +1079,13 @@ const Overview = () => {
                         </Col>
 
                         <Col xs={12} sm={8} md={4}>
-                          <div className="stat-item gradient-primary" style={{ padding: '8px' }}>
-                            <div className="stat-icon" style={{ width: 28, height: 28, fontSize: 12 }}>
+                          <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
+                            <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 16 }}>
                               <CloudServerOutlined />
                             </div>
                             <div className="stat-content">
-                              <Text className="stat-label" style={{ fontSize: '11px' }}>服务路由</Text>
-                              <Text className="stat-value" style={{ fontSize: '14px' }}>
+                              <Text className="stat-label" style={{ fontSize: '13px' }}>服务路由</Text>
+                              <Text className="stat-value" style={{ fontSize: '18px', fontWeight: 600 }}>
                                 {data?.clusterResourceStatus?.serviceNum || 0}
                               </Text>
                             </div>
@@ -834,13 +1093,13 @@ const Overview = () => {
                         </Col>
 
                         <Col xs={12} sm={8} md={4}>
-                          <div className="stat-item gradient-success" style={{ padding: '8px' }}>
-                            <div className="stat-icon" style={{ width: 28, height: 28, fontSize: 12 }}>
+                          <div className="stat-item gradient-success" style={{ padding: '12px' }}>
+                            <div className="stat-icon" style={{ width: 32, height: 32, fontSize: 16 }}>
                               <SafetyOutlined />
                             </div>
                             <div className="stat-content">
-                              <Text className="stat-label" style={{ fontSize: '11px' }}>配置秘钥</Text>
-                              <Text className="stat-value" style={{ fontSize: '14px' }}>
+                              <Text className="stat-label" style={{ fontSize: '13px' }}>配置秘钥</Text>
+                              <Text className="stat-value" style={{ fontSize: '18px', fontWeight: 600 }}>
                                 {data?.clusterResourceStatus?.configNum || 0}
                               </Text>
                             </div>
@@ -853,22 +1112,95 @@ const Overview = () => {
               </Col>
             </Row>
 
+            {/* 监控和状态区域 */}
+            <div style={{ marginTop: '20px' }}>
+              {/* 健康状态和事件告警 - 同一行，等高布局 */}
+              <Row gutter={[20, 16]}>
+                {/* 健康状态卡片 */}
+                <Col xs={24} lg={12}>
+                  <div 
+                    style={{ 
+                      height: '320px', // 固定高度
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                      transition: 'all 0.3s ease',
+                      border: '1px solid rgba(0,0,0,0.06)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+                    }}
+                  >
+                    <HealthStatusCard
+                      title="系统健康状态"
+                      healthData={finalHealthData}
+                      loading={healthLoading}
+                    />
+                  </div>
+                </Col>
+
+                {/* 事件告警卡片 */}
+                <Col xs={24} lg={12}>
+                  <div 
+                    style={{ 
+                      height: '320px', // 固定高度
+                      borderRadius: '12px',
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                      transition: 'all 0.3s ease',
+                      border: '1px solid rgba(0,0,0,0.06)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+                    }}
+                  >
+                    <EventAlertCard
+                      title="系统事件告警"
+                      events={finalEventsData?.events || []}
+                      loading={eventsLoading}
+                      onRefresh={refetchEvents}
+                      onViewAll={() => {
+                        // TODO: 跳转到事件详情页面
+                        console.log('查看全部事件');
+                      }}
+                    />
+                  </div>
+                </Col>
+              </Row>
+            </div>
+
             {/* 集群资源视图 */}
             <div className="cluster-resources-section" style={{ marginTop: '24px' }}>
               <Card 
                 className="modern-card"
-                style={{ marginBottom: 0 }}
+                style={{ 
+                  marginBottom: 0,
+                  borderRadius: '16px',
+                  boxShadow: '0 6px 28px rgba(0,0,0,0.1)',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  overflow: 'hidden'
+                }}
                 styles={{ body: { padding: '24px' } }}
                 title={
                   <div className="card-header" style={{ marginBottom: 0 }}>
-                    <div className="header-icon-wrapper" style={{ width: 32, height: 32, fontSize: 16 }}>
+                    <div className="header-icon-wrapper" style={{ width: 40, height: 40, fontSize: 20 }}>
                       <ClusterOutlined className="header-icon" />
                     </div>
                     <div className="header-text">
-                      <Title level={4} className="card-title" style={{ fontSize: '18px', marginBottom: '4px' }}>
+                      <Title level={4} className="card-title" style={{ fontSize: '20px', marginBottom: '6px' }}>
                         集群资源视图
                       </Title>
-                      <Text type="secondary" style={{ fontSize: '14px' }}>实时监控多云环境中的集群状态和资源使用情况</Text>
+                      <Text type="secondary" style={{ fontSize: '15px' }}>实时监控多云环境中的集群状态和资源使用情况</Text>
                     </div>
                   </div>
                 }
@@ -876,30 +1208,30 @@ const Overview = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     {/* 集群统计信息 */}
                     {clustersData?.clusters && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginRight: '16px' }}>
-                        <Text style={{ fontSize: '12px', color: '#666' }}>
-                          总计: <strong>{clustersData.clusters.length}</strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginRight: '20px' }}>
+                        <Text style={{ fontSize: '16px', color: '#666', fontWeight: 500 }}>
+                          总计: <strong style={{ color: '#1890ff' }}>{clustersData.clusters.length}</strong>
                         </Text>
-                        <Text style={{ fontSize: '12px', color: '#52c41a' }}>
+                        <Text style={{ fontSize: '16px', color: '#52c41a', fontWeight: 500 }}>
                           健康: <strong>{clustersData.clusters.filter(c => c.status === 'Ready').length}</strong>
                         </Text>
                         {clustersData.clusters.filter(c => c.status !== 'Ready').length > 0 && (
-                          <Text style={{ fontSize: '12px', color: '#ff4d4f' }}>
+                          <Text style={{ fontSize: '16px', color: '#ff4d4f', fontWeight: 500 }}>
                             异常: <strong>{clustersData.clusters.filter(c => c.status !== 'Ready').length}</strong>
                           </Text>
                         )}
                       </div>
                     )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#666' }}>
-                      <div style={{ width: 8, height: 8, backgroundColor: '#52c41a', borderRadius: '50%' }}></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#666' }}>
+                      <div style={{ width: 10, height: 10, backgroundColor: '#52c41a', borderRadius: '50%' }}></div>
                       <span>健康</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#666' }}>
-                      <div style={{ width: 8, height: 8, backgroundColor: '#faad14', borderRadius: '50%' }}></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#666' }}>
+                      <div style={{ width: 10, height: 10, backgroundColor: '#faad14', borderRadius: '50%' }}></div>
                       <span>警告</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#666' }}>
-                      <div style={{ width: 8, height: 8, backgroundColor: '#ff4d4f', borderRadius: '50%' }}></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#666' }}>
+                      <div style={{ width: 10, height: 10, backgroundColor: '#ff4d4f', borderRadius: '50%' }}></div>
                       <span>异常</span>
                     </div>
                     <Button 
