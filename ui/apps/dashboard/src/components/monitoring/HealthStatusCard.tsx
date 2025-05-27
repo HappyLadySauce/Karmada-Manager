@@ -136,30 +136,6 @@ const HealthStatusCard: React.FC<HealthStatusCardProps> = ({
       {healthData ? (
         <div style={{ maxHeight: '240px', overflowY: 'auto' }}>
           <Space direction="vertical" style={{ width: '100%' }} size={12}>
-          {/* 整体状态展示 */}
-          <div className="stat-item gradient-primary" style={{ padding: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Space>
-                <div className="stat-icon" style={{ 
-                  width: 32, 
-                  height: 32, 
-                  fontSize: 18, 
-                  color: overallStatus.color 
-                }}>
-                  {overallStatus.icon}
-                </div>
-                <div className="stat-content">
-                  <Text className="stat-label" style={{ fontSize: '14px' }}>系统整体状态</Text>
-                  <Text className="stat-value" style={{ fontSize: '18px', fontWeight: 600, color: overallStatus.color }}>
-                    {overallStatus.text}
-                  </Text>
-                </div>
-              </Space>
-              <Text style={{ fontSize: '14px', color: '#666' }}>
-                实时监控
-              </Text>
-            </div>
-          </div>
 
           {/* 系统组件状态 */}
           {healthData.components && healthData.components.length > 0 && (
