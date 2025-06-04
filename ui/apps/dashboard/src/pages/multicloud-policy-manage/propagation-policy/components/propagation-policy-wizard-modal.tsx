@@ -270,7 +270,29 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
           spreadConstraints: config.spec.placement.spreadConstraints,
         }),
         ...(config.spec.placement.replicaScheduling && {
-          replicaScheduling: config.spec.placement.replicaScheduling,
+          replicaScheduling: (() => {
+            const replicaScheduling = { ...config.spec.placement.replicaScheduling };
+            
+            // 如果是加权分发但没有配置权重，自动为所有集群设置相等权重
+            if (
+              replicaScheduling.replicaDivisionPreference === 'Weighted' &&
+              replicaScheduling.replicaSchedulingType === 'Divided' &&
+              config.spec.placement.clusters &&
+              config.spec.placement.clusters.length > 0
+            ) {
+              if (!replicaScheduling.weightPreference?.staticWeightList || 
+                  replicaScheduling.weightPreference.staticWeightList.length === 0) {
+                replicaScheduling.weightPreference = {
+                  staticWeightList: config.spec.placement.clusters.map(cluster => ({
+                    targetCluster: { clusterNames: [cluster] },
+                    weight: 1
+                  }))
+                };
+              }
+            }
+            
+            return replicaScheduling;
+          })(),
         }),
       },
       ...(config.spec.preemption && { preemption: config.spec.preemption }),
@@ -882,6 +904,25 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
       {/* 副本调度配置 */}
       <div style={{ border: '1px solid #d9d9d9', borderRadius: '8px', padding: '16px', marginBottom: '16px', backgroundColor: '#fafafa' }}>
         <Text strong style={{ marginBottom: '12px', display: 'block' }}>副本调度</Text>
+        
+        {/* 配置说明 */}
+        <Alert
+          message="副本调度配置说明"
+          description={
+            <div>
+              <div><strong>分发偏好：</strong></div>
+              <div>• <strong>聚合</strong>：副本将被聚合分发，尽量减少分布的集群数量</div>
+              <div>• <strong>加权</strong>：副本将按权重比例分发到各个集群</div>
+              <br />
+              <div><strong>调度类型：</strong></div>
+              <div>• <strong>复制</strong>：在每个目标集群中创建完整的副本（副本数相同）</div>
+              <div>• <strong>分割</strong>：将总副本数分割到多个集群中</div>
+            </div>
+          }
+          type="info"
+          showIcon
+          style={{ marginBottom: '16px', fontSize: '12px' }}
+        />
         <Row gutter={[16, 8]}>
           <Col span={12}>
             <Form.Item label="分发偏好" style={{ marginBottom: 8 }}>
@@ -908,6 +949,61 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
             </Form.Item>
           </Col>
         </Row>
+        
+        {/* 权重配置 - 仅在加权分发且选择了集群时显示 */}
+        {policyConfig.spec.placement.replicaScheduling?.replicaDivisionPreference === 'Weighted' && 
+         policyConfig.spec.placement.replicaScheduling?.replicaSchedulingType === 'Divided' &&
+         policyConfig.spec.placement.clusters && policyConfig.spec.placement.clusters.length > 0 && (
+          <div style={{ marginTop: '12px', padding: '12px', backgroundColor: '#f0f0f0', borderRadius: '6px' }}>
+            <Text strong style={{ marginBottom: '8px', display: 'block', fontSize: '13px' }}>
+              集群权重配置 <Text type="secondary">(权重总和将自动标准化)</Text>
+            </Text>
+            <Row gutter={[8, 8]}>
+              {policyConfig.spec.placement.clusters.map((cluster) => {
+                const currentWeights = policyConfig.spec.placement.replicaScheduling?.weightPreference?.staticWeightList || [];
+                const clusterWeight = currentWeights.find(w => w.targetCluster.clusterNames?.includes(cluster))?.weight || 1;
+                
+                return (
+                  <Col span={12} key={cluster}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Text style={{ minWidth: '80px', fontSize: '12px' }}>{cluster}:</Text>
+                      <InputNumber
+                        size="small"
+                        min={1}
+                        max={100}
+                        value={clusterWeight}
+                        onChange={(value) => {
+                          const newWeights = [...currentWeights];
+                          const existingIndex = newWeights.findIndex(w => w.targetCluster.clusterNames?.includes(cluster));
+                          
+                          if (existingIndex >= 0) {
+                            newWeights[existingIndex] = {
+                              targetCluster: { clusterNames: [cluster] },
+                              weight: value || 1
+                            };
+                          } else {
+                            newWeights.push({
+                              targetCluster: { clusterNames: [cluster] },
+                              weight: value || 1
+                            });
+                          }
+                          
+                          updatePolicyConfig('spec.placement.replicaScheduling.weightPreference.staticWeightList', newWeights);
+                        }}
+                        style={{ flex: 1 }}
+                      />
+                    </div>
+                  </Col>
+                );
+              })}
+            </Row>
+            <div style={{ marginTop: '8px' }}>
+              <Text type="secondary" style={{ fontSize: '11px' }}>
+                💡 提示：当使用"加权"分发时，副本将按照设定的权重比例分配到各个集群。例如，权重 2:1 表示第一个集群分配到的副本数是第二个集群的两倍。
+              </Text>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 故障转移配置 */}

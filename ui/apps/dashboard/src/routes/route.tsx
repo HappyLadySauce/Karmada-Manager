@@ -43,6 +43,7 @@ import { Failover, Permission, Reschedule } from '@/pages/advanced-config';
 import { BuildInAddon, ThridPartyAddon } from '@/pages/addon';
 import ClusterManage from '@/pages/cluster-manage';
 import ClusterDetail from '@/pages/cluster-manage/cluster-detail';
+import ClusterScheduling from '@/pages/cluster-manage/cluster-scheduling';
 import Login from '@/pages/login';
 import { Icons } from '@/components/icons';
 
@@ -174,11 +175,20 @@ export function getRoutes() {
           },
           children: [
             {
-              index: true,
+              path: '',
               element: <ClusterManage />,
               handle: {
                 sidebarKey: 'CLUSTER-LIST',
                 sidebarName: '集群列表',
+                isPage: true,
+              },
+            },
+            {
+              path: 'scheduling',
+              element: <ClusterScheduling />,
+              handle: {
+                sidebarKey: 'CLUSTER-SCHEDULING',
+                sidebarName: '集群调度',
                 isPage: true,
               },
             },

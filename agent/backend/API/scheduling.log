@@ -1,101 +1,573 @@
-[0;34m[INFO][0m 📋 开始调度接口测试...
-[0;34m[INFO][0m 🚀 测试: 获取Deployment调度信息
+==================================================
+📋 Karmada Dashboard 调度接口测试脚本
+📅 启动时间: 2025年 06月 04日 星期三 23:02:38 CST
+🖥️  运行环境: Linux 5.10.134-18.an8.x86_64
+🎯 测试目标: 调度相关 API 接口
+==================================================
+[0;34m[INFO][0m 🎯 开始运行 Karmada Dashboard 调度接口测试...
+[0;34m[INFO][0m 🌐 API 基础 URL: http://localhost:8000
+[0;34m[INFO][0m 📋 测试套件: all
+[0;34m[INFO][0m 📊 输出格式: console
+[0;34m[INFO][0m 📝 日志级别: INFO
+[1;33m[WARN][0m ⚠️  未提供认证 Token，某些接口可能返回 401/403
+====================================================
+[0;35m[HEADER][0m 🔍 开始健康检查测试...
+[0;34m[INFO][0m 🚀 测试: 健康检查
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/health
+[0;34m[INFO][0m 📥 响应状态码: 404
+[0;34m[INFO][0m 📄 响应内容 (完整数据):
+404
+404 page not found
+[0;31m[FAIL][0m 健康检查 ❌ (状态码: 404)
+----------------------------------------
+[0;35m[HEADER][0m 📋 开始工作负载调度接口测试...
+[0;34m[INFO][0m 🔍 测试工作负载: default/nginx-deployment (kind: Deployment)
+[0;34m[INFO][0m 🚀 测试: 获取Deployment基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/nginx-deployment/scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .032218640s
+[0;32m[PASS][0m 获取Deployment基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取Deployment精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/nginx-deployment/precise-scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .030669357s
+[0;32m[PASS][0m 获取Deployment精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: default/nginx-deployment (kind: StatefulSet)
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/nginx-deployment/scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .030921342s
+[0;32m[PASS][0m 获取StatefulSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/nginx-deployment/precise-scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .034422910s
+[0;32m[PASS][0m 获取StatefulSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: default/nginx-deployment (kind: DaemonSet)
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/nginx-deployment/scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .040441218s
+[0;32m[PASS][0m 获取DaemonSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/nginx-deployment/precise-scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029056220s
+[0;32m[PASS][0m 获取DaemonSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: default/test-deployment (kind: Deployment)
+[0;34m[INFO][0m 🚀 测试: 获取Deployment基础调度信息
 [0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/test-deployment/scheduling?kind=Deployment
 [0;34m[INFO][0m 📥 响应状态码: 200
-[0;34m[INFO][0m 📄 响应内容 (完整数据):
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "workloadInfo": {
-      "name": "test-deployment",
-      "namespace": "default",
-      "kind": "Deployment",
-      "apiVersion": "apps/v1",
-      "replicas": 0,
-      "readyReplicas": 0
-    },
-    "clusterPlacements": null,
-    "schedulingStatus": {
-      "phase": "Pending",
-      "message": "No resource binding found"
-    }
-  }
-}
-[0;32m[PASS][0m 获取Deployment调度信息 ✅
-----------------------------------------
-[0;34m[INFO][0m 🚀 测试: 获取StatefulSet调度信息
+[0;34m[INFO][0m ⏱️  响应时间: .030799060s
+[0;32m[PASS][0m 获取Deployment基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取Deployment精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/test-deployment/precise-scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .028267892s
+[0;32m[PASS][0m 获取Deployment精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: default/test-deployment (kind: StatefulSet)
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet基础调度信息
 [0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/test-deployment/scheduling?kind=StatefulSet
 [0;34m[INFO][0m 📥 响应状态码: 200
-[0;34m[INFO][0m 📄 响应内容 (完整数据):
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "workloadInfo": {
-      "name": "test-deployment",
-      "namespace": "default",
-      "kind": "StatefulSet",
-      "apiVersion": "apps/v1",
-      "replicas": 0,
-      "readyReplicas": 0
-    },
-    "clusterPlacements": null,
-    "schedulingStatus": {
-      "phase": "Pending",
-      "message": "No resource binding found"
-    }
-  }
-}
-[0;32m[PASS][0m 获取StatefulSet调度信息 ✅
-----------------------------------------
-[0;34m[INFO][0m 🚀 测试: 获取DaemonSet调度信息
+[0;34m[INFO][0m ⏱️  响应时间: .028434452s
+[0;32m[PASS][0m 获取StatefulSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/test-deployment/precise-scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .028040161s
+[0;32m[PASS][0m 获取StatefulSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: default/test-deployment (kind: DaemonSet)
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet基础调度信息
 [0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/test-deployment/scheduling?kind=DaemonSet
 [0;34m[INFO][0m 📥 响应状态码: 200
-[0;34m[INFO][0m 📄 响应内容 (完整数据):
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "workloadInfo": {
-      "name": "test-deployment",
-      "namespace": "default",
-      "kind": "DaemonSet",
-      "apiVersion": "apps/v1",
-      "replicas": 0,
-      "readyReplicas": 0
-    },
-    "clusterPlacements": null,
-    "schedulingStatus": {
-      "phase": "Pending",
-      "message": "No resource binding found"
-    }
-  }
-}
-[0;32m[PASS][0m 获取DaemonSet调度信息 ✅
-----------------------------------------
-[0;34m[INFO][0m 🚀 测试: 获取test-deployment调度信息
-[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/test-deployment/scheduling
+[0;34m[INFO][0m ⏱️  响应时间: .029702364s
+[0;32m[PASS][0m 获取DaemonSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/test-deployment/precise-scheduling?kind=DaemonSet
 [0;34m[INFO][0m 📥 响应状态码: 200
-[0;34m[INFO][0m 📄 响应内容 (完整数据):
-{
-  "code": 200,
-  "message": "success",
-  "data": {
-    "workloadInfo": {
-      "name": "test-deployment",
-      "namespace": "default",
-      "kind": "Deployment",
-      "apiVersion": "apps/v1",
-      "replicas": 0,
-      "readyReplicas": 0
-    },
-    "clusterPlacements": null,
-    "schedulingStatus": {
-      "phase": "Pending",
-      "message": "No resource binding found"
-    }
-  }
-}
-[0;32m[PASS][0m 获取test-deployment调度信息 ✅
-----------------------------------------
+[0;34m[INFO][0m ⏱️  响应时间: .030436614s
+[0;32m[PASS][0m 获取DaemonSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: default/example-app (kind: Deployment)
+[0;34m[INFO][0m 🚀 测试: 获取Deployment基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/example-app/scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .031355710s
+[0;32m[PASS][0m 获取Deployment基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取Deployment精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/example-app/precise-scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029487059s
+[0;32m[PASS][0m 获取Deployment精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: default/example-app (kind: StatefulSet)
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/example-app/scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .031692336s
+[0;32m[PASS][0m 获取StatefulSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/example-app/precise-scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .034228850s
+[0;32m[PASS][0m 获取StatefulSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: default/example-app (kind: DaemonSet)
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/example-app/scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .030539851s
+[0;32m[PASS][0m 获取DaemonSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/example-app/precise-scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .034740544s
+[0;32m[PASS][0m 获取DaemonSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: kube-system/nginx-deployment (kind: Deployment)
+[0;34m[INFO][0m 🚀 测试: 获取Deployment基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/nginx-deployment/scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .028545148s
+[0;32m[PASS][0m 获取Deployment基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取Deployment精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/nginx-deployment/precise-scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .030672419s
+[0;32m[PASS][0m 获取Deployment精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: kube-system/nginx-deployment (kind: StatefulSet)
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/nginx-deployment/scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029631421s
+[0;32m[PASS][0m 获取StatefulSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/nginx-deployment/precise-scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029401080s
+[0;32m[PASS][0m 获取StatefulSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: kube-system/nginx-deployment (kind: DaemonSet)
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/nginx-deployment/scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .031660237s
+[0;32m[PASS][0m 获取DaemonSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/nginx-deployment/precise-scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029943483s
+[0;32m[PASS][0m 获取DaemonSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: kube-system/test-deployment (kind: Deployment)
+[0;34m[INFO][0m 🚀 测试: 获取Deployment基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/test-deployment/scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029337349s
+[0;32m[PASS][0m 获取Deployment基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取Deployment精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/test-deployment/precise-scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029549728s
+[0;32m[PASS][0m 获取Deployment精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: kube-system/test-deployment (kind: StatefulSet)
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/test-deployment/scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029501841s
+[0;32m[PASS][0m 获取StatefulSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/test-deployment/precise-scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029217391s
+[0;32m[PASS][0m 获取StatefulSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: kube-system/test-deployment (kind: DaemonSet)
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/test-deployment/scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .031515500s
+[0;32m[PASS][0m 获取DaemonSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/test-deployment/precise-scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .031617279s
+[0;32m[PASS][0m 获取DaemonSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: kube-system/example-app (kind: Deployment)
+[0;34m[INFO][0m 🚀 测试: 获取Deployment基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/example-app/scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .041016584s
+[0;32m[PASS][0m 获取Deployment基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取Deployment精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/example-app/precise-scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029162664s
+[0;32m[PASS][0m 获取Deployment精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: kube-system/example-app (kind: StatefulSet)
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/example-app/scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .032905580s
+[0;32m[PASS][0m 获取StatefulSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/example-app/precise-scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .033130130s
+[0;32m[PASS][0m 获取StatefulSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: kube-system/example-app (kind: DaemonSet)
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/example-app/scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .031030184s
+[0;32m[PASS][0m 获取DaemonSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/kube-system/example-app/precise-scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .037059281s
+[0;32m[PASS][0m 获取DaemonSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: test-namespace/nginx-deployment (kind: Deployment)
+[0;34m[INFO][0m 🚀 测试: 获取Deployment基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/nginx-deployment/scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .030897784s
+[0;32m[PASS][0m 获取Deployment基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取Deployment精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/nginx-deployment/precise-scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .033019611s
+[0;32m[PASS][0m 获取Deployment精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: test-namespace/nginx-deployment (kind: StatefulSet)
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/nginx-deployment/scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029913309s
+[0;32m[PASS][0m 获取StatefulSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/nginx-deployment/precise-scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029827478s
+[0;32m[PASS][0m 获取StatefulSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: test-namespace/nginx-deployment (kind: DaemonSet)
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/nginx-deployment/scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .033547953s
+[0;32m[PASS][0m 获取DaemonSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/nginx-deployment/precise-scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .028761218s
+[0;32m[PASS][0m 获取DaemonSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: test-namespace/test-deployment (kind: Deployment)
+[0;34m[INFO][0m 🚀 测试: 获取Deployment基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/test-deployment/scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .034171269s
+[0;32m[PASS][0m 获取Deployment基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取Deployment精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/test-deployment/precise-scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029852980s
+[0;32m[PASS][0m 获取Deployment精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: test-namespace/test-deployment (kind: StatefulSet)
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/test-deployment/scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .031744937s
+[0;32m[PASS][0m 获取StatefulSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/test-deployment/precise-scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029898552s
+[0;32m[PASS][0m 获取StatefulSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: test-namespace/test-deployment (kind: DaemonSet)
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/test-deployment/scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029604018s
+[0;32m[PASS][0m 获取DaemonSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/test-deployment/precise-scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .030922220s
+[0;32m[PASS][0m 获取DaemonSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: test-namespace/example-app (kind: Deployment)
+[0;34m[INFO][0m 🚀 测试: 获取Deployment基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/example-app/scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .036120722s
+[0;32m[PASS][0m 获取Deployment基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取Deployment精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/example-app/precise-scheduling?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029851037s
+[0;32m[PASS][0m 获取Deployment精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: test-namespace/example-app (kind: StatefulSet)
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/example-app/scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .030651910s
+[0;32m[PASS][0m 获取StatefulSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取StatefulSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/example-app/precise-scheduling?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .032422166s
+[0;32m[PASS][0m 获取StatefulSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试工作负载: test-namespace/example-app (kind: DaemonSet)
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet基础调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/example-app/scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .035710847s
+[0;32m[PASS][0m 获取DaemonSet基础调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取DaemonSet精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/test-namespace/example-app/precise-scheduling?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .030398120s
+[0;32m[PASS][0m 获取DaemonSet精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试默认 kind (Deployment)
+[0;34m[INFO][0m 🚀 测试: 获取默认Deployment调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/nginx-deployment/scheduling
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .030889848s
+[0;32m[PASS][0m 获取默认Deployment调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取默认Deployment精确调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/nginx-deployment/precise-scheduling
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .030967514s
+[0;32m[PASS][0m 获取默认Deployment精确调度信息 ✅
+[0;34m[INFO][0m 🔍 测试特殊情况和边界条件
+[0;34m[INFO][0m 🚀 测试: 不存在的命名空间
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/non-existent-namespace/test-deployment/scheduling
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .028997089s
+[0;31m[FAIL][0m 不存在的命名空间 ❌ (状态码: 200, 期望: 404 401 403 500)
+[0;34m[INFO][0m 🚀 测试: 不存在的工作负载
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/non-existent-deployment/scheduling
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .027905812s
+[0;31m[FAIL][0m 不存在的工作负载 ❌ (状态码: 200, 期望: 404 401 403 500)
+[0;34m[INFO][0m 🚀 测试: 无效的工作负载类型
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/test-deployment/scheduling?kind=InvalidKind
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .029871780s
+[0;31m[FAIL][0m 无效的工作负载类型 ❌ (状态码: 200, 期望: 400 404 401 403 500)
+[0;34m[INFO][0m 🚀 测试: 空的工作负载名称
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default//scheduling
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .031121618s
+[0;31m[FAIL][0m 空的工作负载名称 ❌ (状态码: 200, 期望: 404 401 403)
+[0;34m[INFO][0m 🚀 测试: 包含特殊字符的工作负载名称
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/workloads/default/test-deployment-with-special-chars/scheduling
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .032685518s
+[0;32m[PASS][0m 包含特殊字符的工作负载名称 ✅
+[0;35m[HEADER][0m 📊 开始调度概览接口测试...
+[0;34m[INFO][0m 🚀 测试: 获取调度概览信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/overview
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016360395s
+[0;32m[PASS][0m 获取调度概览信息 ✅
+[0;34m[INFO][0m 🔍 测试命名空间过滤: default
+[0;34m[INFO][0m 🚀 测试: 获取default命名空间调度概览
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/overview?namespace=default
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015228059s
+[0;32m[PASS][0m 获取default命名空间调度概览 ✅
+[0;34m[INFO][0m 🔍 测试命名空间过滤: kube-system
+[0;34m[INFO][0m 🚀 测试: 获取kube-system命名空间调度概览
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/overview?namespace=kube-system
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015971520s
+[0;32m[PASS][0m 获取kube-system命名空间调度概览 ✅
+[0;34m[INFO][0m 🔍 测试命名空间过滤: test-namespace
+[0;34m[INFO][0m 🚀 测试: 获取test-namespace命名空间调度概览
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/overview?namespace=test-namespace
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .017164387s
+[0;32m[PASS][0m 获取test-namespace命名空间调度概览 ✅
+[0;34m[INFO][0m 🔍 测试空命名空间过滤
+[0;34m[INFO][0m 🚀 测试: 获取空命名空间过滤调度概览
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/overview?namespace=
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016451834s
+[0;32m[PASS][0m 获取空命名空间过滤调度概览 ✅
+[0;34m[INFO][0m 🚀 测试: 不存在的命名空间概览
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/overview?namespace=non-existent-namespace
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .018890197s
+[0;32m[PASS][0m 不存在的命名空间概览 ✅
+[0;35m[HEADER][0m 📁 开始命名空间工作负载调度接口测试...
+[0;34m[INFO][0m 🔍 测试命名空间: default
+[0;34m[INFO][0m 🚀 测试: 获取default命名空间工作负载调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .019227260s
+[0;32m[PASS][0m 获取default命名空间工作负载调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 分页获取default命名空间工作负载(第1页,10条)
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?page=1&pageSize=10
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016155973s
+[0;32m[PASS][0m 分页获取default命名空间工作负载(第1页,10条) ✅
+[0;34m[INFO][0m 🚀 测试: 分页获取default命名空间工作负载(第2页,20条)
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?page=2&pageSize=20
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .019366947s
+[0;32m[PASS][0m 分页获取default命名空间工作负载(第2页,20条) ✅
+[0;34m[INFO][0m 🚀 测试: 获取default命名空间Deployment调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015487949s
+[0;32m[PASS][0m 获取default命名空间Deployment调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取default命名空间StatefulSet调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015504994s
+[0;32m[PASS][0m 获取default命名空间StatefulSet调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取default命名空间DaemonSet调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016727076s
+[0;32m[PASS][0m 获取default命名空间DaemonSet调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取default命名空间Job调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?kind=Job
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015598619s
+[0;32m[PASS][0m 获取default命名空间Job调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取default命名空间CronJob调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?kind=CronJob
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015818137s
+[0;32m[PASS][0m 获取default命名空间CronJob调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 组合参数获取default命名空间Deployment调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?page=1&pageSize=5&kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016115320s
+[0;32m[PASS][0m 组合参数获取default命名空间Deployment调度信息 ✅
+[0;34m[INFO][0m 🔍 测试命名空间: kube-system
+[0;34m[INFO][0m 🚀 测试: 获取kube-system命名空间工作负载调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/kube-system/workloads
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016284287s
+[0;32m[PASS][0m 获取kube-system命名空间工作负载调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 分页获取kube-system命名空间工作负载(第1页,10条)
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/kube-system/workloads?page=1&pageSize=10
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016051720s
+[0;32m[PASS][0m 分页获取kube-system命名空间工作负载(第1页,10条) ✅
+[0;34m[INFO][0m 🚀 测试: 分页获取kube-system命名空间工作负载(第2页,20条)
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/kube-system/workloads?page=2&pageSize=20
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016717300s
+[0;32m[PASS][0m 分页获取kube-system命名空间工作负载(第2页,20条) ✅
+[0;34m[INFO][0m 🚀 测试: 获取kube-system命名空间Deployment调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/kube-system/workloads?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015275014s
+[0;32m[PASS][0m 获取kube-system命名空间Deployment调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取kube-system命名空间StatefulSet调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/kube-system/workloads?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015730090s
+[0;32m[PASS][0m 获取kube-system命名空间StatefulSet调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取kube-system命名空间DaemonSet调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/kube-system/workloads?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016572772s
+[0;32m[PASS][0m 获取kube-system命名空间DaemonSet调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取kube-system命名空间Job调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/kube-system/workloads?kind=Job
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016936846s
+[0;32m[PASS][0m 获取kube-system命名空间Job调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取kube-system命名空间CronJob调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/kube-system/workloads?kind=CronJob
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015507962s
+[0;32m[PASS][0m 获取kube-system命名空间CronJob调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 组合参数获取kube-system命名空间Deployment调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/kube-system/workloads?page=1&pageSize=5&kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016292561s
+[0;32m[PASS][0m 组合参数获取kube-system命名空间Deployment调度信息 ✅
+[0;34m[INFO][0m 🔍 测试命名空间: test-namespace
+[0;34m[INFO][0m 🚀 测试: 获取test-namespace命名空间工作负载调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/test-namespace/workloads
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015349863s
+[0;32m[PASS][0m 获取test-namespace命名空间工作负载调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 分页获取test-namespace命名空间工作负载(第1页,10条)
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/test-namespace/workloads?page=1&pageSize=10
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015368206s
+[0;32m[PASS][0m 分页获取test-namespace命名空间工作负载(第1页,10条) ✅
+[0;34m[INFO][0m 🚀 测试: 分页获取test-namespace命名空间工作负载(第2页,20条)
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/test-namespace/workloads?page=2&pageSize=20
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015509134s
+[0;32m[PASS][0m 分页获取test-namespace命名空间工作负载(第2页,20条) ✅
+[0;34m[INFO][0m 🚀 测试: 获取test-namespace命名空间Deployment调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/test-namespace/workloads?kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015352152s
+[0;32m[PASS][0m 获取test-namespace命名空间Deployment调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取test-namespace命名空间StatefulSet调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/test-namespace/workloads?kind=StatefulSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .017041006s
+[0;32m[PASS][0m 获取test-namespace命名空间StatefulSet调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取test-namespace命名空间DaemonSet调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/test-namespace/workloads?kind=DaemonSet
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015820098s
+[0;32m[PASS][0m 获取test-namespace命名空间DaemonSet调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取test-namespace命名空间Job调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/test-namespace/workloads?kind=Job
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .014725504s
+[0;32m[PASS][0m 获取test-namespace命名空间Job调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 获取test-namespace命名空间CronJob调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/test-namespace/workloads?kind=CronJob
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015199588s
+[0;32m[PASS][0m 获取test-namespace命名空间CronJob调度信息 ✅
+[0;34m[INFO][0m 🚀 测试: 组合参数获取test-namespace命名空间Deployment调度信息
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/test-namespace/workloads?page=1&pageSize=5&kind=Deployment
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .017179281s
+[0;32m[PASS][0m 组合参数获取test-namespace命名空间Deployment调度信息 ✅
+[0;34m[INFO][0m 🔍 测试边界条件
+[0;34m[INFO][0m 🚀 测试: 不存在的命名空间工作负载调度
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/non-existent-namespace/workloads
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016528265s
+[0;31m[FAIL][0m 不存在的命名空间工作负载调度 ❌ (状态码: 200, 期望: 404 401 403 500)
+[0;34m[INFO][0m 🚀 测试: 无效的分页参数(page=0,pageSize=0)
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?page=0&pageSize=0
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015071871s
+[0;32m[PASS][0m 无效的分页参数(page=0,pageSize=0) ✅
+[0;34m[INFO][0m 🚀 测试: 负数分页参数
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?page=-1&pageSize=-5
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .019042006s
+[0;32m[PASS][0m 负数分页参数 ✅
+[0;34m[INFO][0m 🚀 测试: 非数字分页参数
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?page=abc&pageSize=xyz
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016106648s
+[0;32m[PASS][0m 非数字分页参数 ✅
+[0;34m[INFO][0m 🚀 测试: 无效的工作负载类型过滤
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?kind=InvalidKind
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .016426601s
+[0;32m[PASS][0m 无效的工作负载类型过滤 ✅
+[0;34m[INFO][0m 🚀 测试: 大分页参数测试
+[0;34m[INFO][0m 📡 请求: GET http://localhost:8000/api/v1/scheduling/namespace/default/workloads?page=1000&pageSize=1000
+[0;34m[INFO][0m 📥 响应状态码: 200
+[0;34m[INFO][0m ⏱️  响应时间: .015114540s
+[0;32m[PASS][0m 大分页参数测试 ✅
+[0;34m[INFO][0m 💡 跳过压力测试 (设置 STRESS_TEST=true 启用)
+====================================================
+[0;34m[INFO][0m 📊 调度接口测试结果汇总:
+  📈 总测试数: 101
+  ✅ 通过数: 95
+  ❌ 失败数: 6
+  ⏭️  跳过数: 0
+  ⏱️  测试耗时: 4 秒
+  📊 成功率: 94%
+[1;33m[WARN][0m ⚠️  大部分调度接口测试通过，少数失败
+====================================================

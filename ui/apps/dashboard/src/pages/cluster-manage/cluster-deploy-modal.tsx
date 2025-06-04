@@ -242,15 +242,15 @@ users:
 
     try {
       // 调用添加集群接口
-      const response = await fetch('/api/v1/clusters', {
+      const response = await fetch('/api/v1/cluster', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: clusterName,
-          kubeconfig: kubeconfig,
-          mode: accessMode,
+          memberClusterName: clusterName,
+          memberClusterKubeconfig: kubeconfig,
+          syncMode: accessMode,
           description: `通过集群部署功能自动创建的${accessMode}模式集群`
         })
       });
