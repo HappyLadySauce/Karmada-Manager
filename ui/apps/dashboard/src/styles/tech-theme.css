@@ -832,6 +832,107 @@ html body .tech-segmented .ant-segmented-item[aria-selected="true"] {
   font-weight: 600 !important;
 }
 
+/* ========== 科技感Tabs样式 ========== */
+.tech-tabs .ant-tabs-nav {
+  margin-bottom: 24px !important;
+}
+
+.tech-tabs .ant-tabs-nav::before {
+  border-bottom: 1px solid var(--glow-border) !important;
+}
+
+.tech-tabs .ant-tabs-tab {
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-color-secondary) !important;
+  font-weight: 500 !important;
+  padding: 12px 24px !important;
+  margin: 0 8px 0 0 !important;
+  border-radius: 8px 8px 0 0 !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.tech-tabs .ant-tabs-tab::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(64, 158, 255, 0.1) 0%, rgba(114, 46, 209, 0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.tech-tabs .ant-tabs-tab:hover {
+  color: var(--tech-primary) !important;
+  background: rgba(64, 158, 255, 0.05) !important;
+}
+
+.tech-tabs .ant-tabs-tab:hover::before {
+  opacity: 1;
+}
+
+.tech-tabs .ant-tabs-tab-active {
+  background: linear-gradient(145deg, var(--tech-primary) 0%, var(--tech-primary-4) 100%) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3) !important;
+  border: 1px solid var(--tech-primary) !important;
+  border-bottom: none !important;
+}
+
+.tech-tabs .ant-tabs-tab-active::before {
+  opacity: 0;
+}
+
+.tech-tabs .ant-tabs-tab-active:hover {
+  background: linear-gradient(145deg, var(--tech-primary-7) 0%, var(--tech-primary) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 16px rgba(64, 158, 255, 0.4) !important;
+}
+
+.tech-tabs .ant-tabs-ink-bar {
+  display: none !important;
+}
+
+.tech-tabs .ant-tabs-content-holder {
+  position: relative;
+}
+
+.tech-tabs .ant-tabs-tabpane {
+  outline: none !important;
+}
+
+/* 科技感发光效果 */
+.tech-tabs .ant-tabs-tab-active::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, var(--tech-primary), var(--tech-primary-4), var(--tech-secondary));
+  border-radius: 10px 10px 0 0;
+  z-index: -1;
+  opacity: 0.7;
+  animation: techTabGlow 3s ease-in-out infinite;
+}
+
+@keyframes techTabGlow {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.02);
+  }
+}
+
 /* ========== 科技感表格样式 ========== */
 .tech-table .ant-table {
   background: transparent !important;

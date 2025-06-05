@@ -24,14 +24,15 @@ import {
   Statistic, 
   Row, 
   Col, 
-  Progress, 
   Descriptions,
   List,
   Badge,
   Tooltip,
   Alert,
   Typography,
-  Collapse
+  Collapse,
+  Button,
+  Flex
 } from 'antd';
 import { 
   ClusterOutlined, 
@@ -42,8 +43,12 @@ import {
   NodeIndexOutlined,
   ContainerOutlined,
   DesktopOutlined,
-  RocketOutlined
+  RocketOutlined,
+  ReloadOutlined,
+  AppstoreOutlined
 } from '@ant-design/icons';
+import '@/styles/tech-theme.css';
+import ScrollContainer from '@/components/common/ScrollContainer';
 import type { ColumnsType } from 'antd/es/table';
 import {
   GetSchedulingOverview,
@@ -60,7 +65,7 @@ import {
 import { WorkloadKind } from '../../services/base';
 
 const { TabPane } = Tabs;
-const { Title, Text } = Typography;
+const { Title } = Typography;
 const { Panel } = Collapse;
 
 // 获取状态颜色
@@ -135,9 +140,9 @@ const ClusterSchedulingPage: React.FC = () => {
         <Space>
           <ContainerOutlined />
           <div>
-            <Text strong>{name}</Text>
+            <Typography.Text strong>{name}</Typography.Text>
             <br />
-            <Text type="secondary">{record.workloadInfo.kind}</Text>
+            <Typography.Text type="secondary">{record.workloadInfo.kind}</Typography.Text>
           </div>
         </Space>
       ),
@@ -151,18 +156,16 @@ const ClusterSchedulingPage: React.FC = () => {
     {
       title: '副本状态',
       key: 'replicas',
-      render: (_, record: WorkloadSchedulingView) => (
-        <Space direction="vertical" size="small">
-          <Text>
-            {record.workloadInfo.readyReplicas} / {record.workloadInfo.replicas}
-          </Text>
-          <Progress
-            percent={Math.round((record.workloadInfo.readyReplicas / record.workloadInfo.replicas) * 100)}
-            size="small"
-            status={record.workloadInfo.readyReplicas === record.workloadInfo.replicas ? 'success' : 'active'}
-          />
-        </Space>
-      ),
+      render: (_, record: WorkloadSchedulingView) => {
+        const readyReplicas = record.workloadInfo.readyReplicas || 0;
+        const totalReplicas = record.workloadInfo.replicas || 0;
+        
+        return (
+          <Typography.Text>
+            {readyReplicas} / {totalReplicas}
+          </Typography.Text>
+        );
+      },
     },
     {
       title: '调度状态',
@@ -193,7 +196,14 @@ const ClusterSchedulingPage: React.FC = () => {
       title: '操作',
       key: 'action',
       render: (_, record: WorkloadSchedulingView) => (
-        <a
+        <Button
+          type="link"
+          size="small"
+          style={{ 
+            color: 'var(--tech-primary)',
+            padding: 0,
+            height: 'auto'
+          }}
           onClick={() => loadWorkloadDetail(
             record.workloadInfo.namespace,
             record.workloadInfo.name,
@@ -201,7 +211,7 @@ const ClusterSchedulingPage: React.FC = () => {
           )}
         >
           查看详情
-        </a>
+        </Button>
       ),
     },
   ];
@@ -209,51 +219,104 @@ const ClusterSchedulingPage: React.FC = () => {
   // 渲染概览统计
   const renderOverview = () => (
     <div>
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
-            <Statistic
-              title="总工作负载"
-              value={overview?.totalWorkloads || 0}
-              prefix={<DatabaseOutlined />}
-            />
-          </Card>
+      {/* 统计信息卡片 */}
+      <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
+        <Col xs={24} sm={6}>
+          <div className="tech-card tech-hover-scale">
+            <div className="flex items-center justify-between mb-4">
+              <AppstoreOutlined 
+                className="text-3xl"
+                style={{ color: 'var(--tech-primary)' }}
+              />
+            </div>
+            <div className="text-center">
+              <div 
+                className="text-4xl font-bold mb-2 tech-hologram-text"
+                style={{ color: 'var(--tech-primary)' }}
+              >
+                {overview?.totalWorkloads || 0}
+              </div>
+              <Typography.Text className="text-gray-600 font-semibold uppercase tracking-wide">
+                总工作负载
+              </Typography.Text>
+            </div>
+          </div>
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
-            <Statistic
-              title="已调度"
-              value={overview?.scheduledWorkloads || 0}
-              prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#3f8600' }}
-            />
-          </Card>
+        <Col xs={24} sm={6}>
+          <div className="tech-card tech-hover-scale">
+            <div className="flex items-center justify-between mb-4">
+              <div 
+                className="w-3 h-3 rounded-full animate-pulse"
+                style={{ background: 'var(--success-color)' }}
+              />
+            </div>
+            <div className="text-center">
+              <div 
+                className="text-4xl font-bold mb-2 tech-hologram-text"
+                style={{ color: 'var(--success-color)' }}
+              >
+                {overview?.scheduledWorkloads || 0}
+              </div>
+              <Typography.Text className="text-gray-600 font-semibold uppercase tracking-wide">
+                已调度
+              </Typography.Text>
+            </div>
+          </div>
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
-            <Statistic
-              title="待调度"
-              value={overview?.pendingWorkloads || 0}
-              prefix={<LoadingOutlined />}
-              valueStyle={{ color: '#cf1322' }}
-            />
-          </Card>
+        <Col xs={24} sm={6}>
+          <div className="tech-card tech-hover-scale">
+            <div className="flex items-center justify-between mb-4">
+              <div 
+                className="w-3 h-3 rounded-full animate-pulse"
+                style={{ background: 'var(--warning-color)' }}
+              />
+            </div>
+            <div className="text-center">
+              <div 
+                className="text-4xl font-bold mb-2 tech-hologram-text"
+                style={{ color: 'var(--warning-color)' }}
+              >
+                {overview?.pendingWorkloads || 0}
+              </div>
+              <Typography.Text className="text-gray-600 font-semibold uppercase tracking-wide">
+                待调度
+              </Typography.Text>
+            </div>
+          </div>
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
-            <Statistic
-              title="调度失败"
-              value={overview?.failedWorkloads || 0}
-              prefix={<ExclamationCircleOutlined />}
-              valueStyle={{ color: '#cf1322' }}
-            />
-          </Card>
+        <Col xs={24} sm={6}>
+          <div className="tech-card tech-hover-scale">
+            <div className="flex items-center justify-between mb-4">
+              <div 
+                className="w-3 h-3 rounded-full animate-pulse"
+                style={{ background: 'var(--error-color)' }}
+              />
+            </div>
+            <div className="text-center">
+              <div 
+                className="text-4xl font-bold mb-2 tech-hologram-text"
+                style={{ color: 'var(--error-color)' }}
+              >
+                {overview?.failedWorkloads || 0}
+              </div>
+              <Typography.Text className="text-gray-600 font-semibold uppercase tracking-wide">
+                调度失败
+              </Typography.Text>
+            </div>
+          </div>
         </Col>
       </Row>
 
-      <Row gutter={16}>
+      {/* 集群分布和命名空间统计 */}
+      <Row gutter={[24, 24]} style={{ marginBottom: '32px' }}>
         <Col xs={24} lg={12}>
-          <Card title="集群分布" extra={<ClusterOutlined />}>
+          <div className="tech-card">
+            <div className="flex items-center justify-between mb-4">
+              <Title level={4} style={{ margin: 0, color: 'var(--text-color)' }}>
+                集群分布
+              </Title>
+              <ClusterOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
+            </div>
             <List
               dataSource={overview?.clusterDistribution || []}
               renderItem={(cluster) => (
@@ -262,90 +325,103 @@ const ClusterSchedulingPage: React.FC = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Space>
                         <Badge status={cluster.clusterStatus === 'Ready' ? 'success' : 'error'} />
-                        <Text strong>{cluster.clusterName}</Text>
+                        <Typography.Text strong>{cluster.clusterName}</Typography.Text>
                       </Space>
-                      <Text type="secondary">{cluster.workloadCount} 个工作负载</Text>
+                      <Typography.Text type="secondary">{cluster.workloadCount} 个工作负载</Typography.Text>
                     </div>
                     <div style={{ marginTop: 8 }}>
-                      <Text type="secondary">
+                      <Typography.Text type="secondary">
                         副本: {cluster.readyReplicas}/{cluster.totalReplicas}
-                      </Text>
-                      <Progress
-                        percent={Math.round((cluster.readyReplicas / cluster.totalReplicas) * 100)}
-                        size="small"
-                        style={{ marginTop: 4 }}
-                      />
+                      </Typography.Text>
                     </div>
                   </div>
                 </List.Item>
               )}
             />
-          </Card>
+          </div>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="命名空间统计">
+          <div className="tech-card">
+            <div className="flex items-center justify-between mb-4">
+              <Title level={4} style={{ margin: 0, color: 'var(--text-color)' }}>
+                命名空间统计
+              </Title>
+              <DatabaseOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
+            </div>
             <List
               dataSource={overview?.namespaceStats || []}
               renderItem={(ns) => (
                 <List.Item>
                   <Space>
                     <Tag color="blue">{ns.namespace}</Tag>
-                    <Text>总计: {ns.workloadCount}</Text>
-                    <Text type="success">调度: {ns.scheduledCount}</Text>
-                    <Text type="warning">待调度: {ns.pendingCount}</Text>
-                    <Text type="danger">失败: {ns.failedCount}</Text>
+                    <Typography.Text>总计: {ns.workloadCount}</Typography.Text>
+                    <Typography.Text style={{ color: 'var(--success-color)' }}>调度: {ns.scheduledCount}</Typography.Text>
+                    <Typography.Text style={{ color: 'var(--warning-color)' }}>待调度: {ns.pendingCount}</Typography.Text>
+                    <Typography.Text style={{ color: 'var(--error-color)' }}>失败: {ns.failedCount}</Typography.Text>
                   </Space>
                 </List.Item>
               )}
             />
-          </Card>
+          </div>
         </Col>
       </Row>
+
+      {/* 集群拓扑视图 - 工作负载列表 */}
+      <div className="tech-card">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <Title level={4} style={{ margin: 0, color: 'var(--text-color)' }}>
+              集群拓扑视图
+            </Title>
+            <Typography.Text type="secondary">
+              显示工作负载在多集群中的分布情况，包括副本状态和调度详情
+            </Typography.Text>
+          </div>
+          <NodeIndexOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
+        </div>
+        <Alert
+          message="工作负载调度分布"
+          description="点击查看详情可查看节点级Pod分布。"
+          type="info"
+          style={{ marginBottom: 16 }}
+        />
+        <div className="tech-table">
+          <Table
+            columns={workloadColumns}
+            dataSource={workloads}
+            loading={loading}
+            rowKey={(record) => `${record.workloadInfo.namespace}-${record.workloadInfo.name}`}
+            pagination={{ pageSize: 10 }}
+          />
+        </div>
+      </div>
     </div>
   );
 
-  // 渲染拓扑视图
-  const renderTopology = () => (
-    <Card title="集群拓扑视图" extra={<NodeIndexOutlined />}>
-      <Alert
-        message="拓扑视图"
-        description="显示工作负载在多集群中的分布情况，包括集群、节点和Pod的层次结构。"
-        type="info"
-        style={{ marginBottom: 16 }}
-      />
-      <Table
-        columns={workloadColumns}
-        dataSource={workloads}
-        loading={loading}
-        rowKey={(record) => `${record.workloadInfo.namespace}-${record.workloadInfo.name}`}
-        pagination={{ pageSize: 10 }}
-      />
-    </Card>
-  );
+
 
   // 渲染节点Pod详情
   const renderNodePodDetails = (nodePlacement: NodePlacement) => (
-    <Card
+    <div
       key={nodePlacement.nodeName}
-      title={
-        <Space>
-          <DesktopOutlined />
-          <span>{nodePlacement.nodeName}</span>
-          <Tag color="blue">{nodePlacement.nodeRoles.join(', ')}</Tag>
+      className="tech-card"
+      style={{ marginBottom: 16 }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <DesktopOutlined style={{ color: 'var(--tech-primary)', fontSize: '16px' }} />
+          <Typography.Text strong>{nodePlacement.nodeName}</Typography.Text>
+          <Tag color="blue">{[...new Set(nodePlacement.nodeRoles)].join(', ')}</Tag>
           <Badge 
             status={nodePlacement.nodeStatus === 'Ready' ? 'success' : 'error'} 
             text={nodePlacement.nodeStatus}
           />
-        </Space>
-      }
-      extra={
+        </div>
         <Space>
-          <Text type="secondary">IP: {nodePlacement.nodeIP}</Text>
-          <Text type="secondary">Pods: {nodePlacement.runningPods}/{nodePlacement.podCount}</Text>
+          <Typography.Text type="secondary">IP: {nodePlacement.nodeIP}</Typography.Text>
+          <Typography.Text type="secondary">Pods: {nodePlacement.runningPods}/{nodePlacement.podCount}</Typography.Text>
         </Space>
-      }
-      style={{ marginBottom: 16 }}
-    >
+      </div>
       <Row gutter={16}>
         <Col xs={24} md={12}>
           <Descriptions size="small" column={1}>
@@ -375,17 +451,17 @@ const ClusterSchedulingPage: React.FC = () => {
                   <Space>
                     <ContainerOutlined />
                     <div>
-                      <Text strong>{pod.podName}</Text>
+                      <Typography.Text strong>{pod.podName}</Typography.Text>
                       <br />
-                      <Text type="secondary">
+                      <Typography.Text type="secondary">
                         状态: <Tag color={pod.podStatus === 'Running' ? 'success' : 'warning'}>{pod.podStatus}</Tag>
                         IP: {pod.podIP}
-                      </Text>
+                      </Typography.Text>
                     </div>
                   </Space>
                   <Space direction="vertical" size="small">
-                    <Text type="secondary">重启: {pod.restartCount}次</Text>
-                    <Text type="secondary">创建: {new Date(pod.createdTime).toLocaleString()}</Text>
+                    <Typography.Text type="secondary">重启: {pod.restartCount}次</Typography.Text>
+                    <Typography.Text type="secondary">创建: {new Date(pod.createdTime).toLocaleString()}</Typography.Text>
                   </Space>
                 </Space>
               </List.Item>
@@ -393,35 +469,35 @@ const ClusterSchedulingPage: React.FC = () => {
           />
         </div>
       )}
-    </Card>
+    </div>
   );
 
   // 渲染详情视图
   const renderDetail = () => {
     if (!selectedWorkload) {
       return (
-        <Card>
+        <div className="tech-card">
           <Alert
             message="请选择工作负载"
             description="从拓扑视图中选择一个工作负载来查看详细的调度信息。"
             type="info"
           />
-        </Card>
+        </div>
       );
     }
 
     return (
       <div>
         {/* 工作负载基本信息 */}
-        <Card 
-          title={
-            <Space>
-              <RocketOutlined />
-              <span>工作负载详情: {selectedWorkload.workloadInfo.name}</span>
-            </Space>
-          }
-          style={{ marginBottom: 16 }}
-        >
+        <div className="tech-card" style={{ marginBottom: 24 }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-2">
+              <RocketOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
+              <Title level={4} style={{ margin: 0, color: 'var(--text-color)' }}>
+                工作负载详情: {selectedWorkload.workloadInfo.name}
+              </Title>
+            </div>
+          </div>
           <Row gutter={16}>
             <Col xs={24} md={12}>
               <Descriptions column={1}>
@@ -444,11 +520,17 @@ const ClusterSchedulingPage: React.FC = () => {
               </Descriptions>
             </Col>
           </Row>
-        </Card>
+        </div>
 
         {/* 传播策略信息 */}
         {selectedWorkload.propagationPolicy && (
-          <Card title="传播策略" style={{ marginBottom: 16 }}>
+          <div className="tech-card" style={{ marginBottom: 24 }}>
+            <div className="flex items-center justify-between mb-4">
+              <Title level={4} style={{ margin: 0, color: 'var(--text-color)' }}>
+                传播策略
+              </Title>
+              <DesktopOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
+            </div>
             <Descriptions column={2}>
               <Descriptions.Item label="策略名称">{selectedWorkload.propagationPolicy.name}</Descriptions.Item>
               <Descriptions.Item label="调度类型">
@@ -462,11 +544,17 @@ const ClusterSchedulingPage: React.FC = () => {
                 </Space>
               </Descriptions.Item>
             </Descriptions>
-          </Card>
+          </div>
         )}
 
         {/* 集群分布详情 */}
-        <Card title="集群分布详情" style={{ marginBottom: 16 }}>
+        <div className="tech-card" style={{ marginBottom: 24 }}>
+          <div className="flex items-center justify-between mb-4">
+            <Title level={4} style={{ margin: 0, color: 'var(--text-color)' }}>
+              集群分布详情
+            </Title>
+            <ClusterOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
+          </div>
           <Collapse>
             {selectedWorkload.clusterPlacements.map((cluster: PreciseClusterPlacement) => (
               <Panel
@@ -481,7 +569,7 @@ const ClusterSchedulingPage: React.FC = () => {
                 }
               >
                 <div style={{ marginBottom: 16 }}>
-                  <Text type="secondary">调度原因: {cluster.reason}</Text>
+                  <Typography.Text type="secondary">调度原因: {cluster.reason}</Typography.Text>
                 </div>
                 
                 {/* 节点分布 */}
@@ -496,32 +584,87 @@ const ClusterSchedulingPage: React.FC = () => {
               </Panel>
             ))}
           </Collapse>
-        </Card>
+        </div>
       </div>
     );
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <Title level={2}>
-        <Space>
-          <ClusterOutlined />
-          集群调度管理
-        </Space>
-      </Title>
-      
-      <Tabs activeKey={activeTab} onChange={setActiveTab}>
-        <TabPane tab="概览" key="overview">
-          {renderOverview()}
-        </TabPane>
-        <TabPane tab="拓扑视图" key="topology">
-          {renderTopology()}
-        </TabPane>
-        <TabPane tab="详细信息" key="detail">
-          {renderDetail()}
-        </TabPane>
-      </Tabs>
-    </div>
+    <ScrollContainer
+      height="100vh"
+      padding="0"
+      background="transparent"
+    >
+      <div className="tech-background min-h-screen">
+        {/* 粒子背景效果 */}
+        <div className="tech-particles-container">
+          {Array.from({ length: 20 }, (_, i) => (
+            <div
+              key={i}
+              className="tech-particle"
+              style={{
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 20}s`
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="relative z-10 p-6">
+          {/* 页面标题 */}
+          <div className="mb-8">
+            <Title 
+              level={1} 
+              className="tech-hologram-text m-0 text-4xl font-bold"
+              style={{ color: 'var(--tech-primary)' }}
+            >
+              🏗️ CLUSTER SCHEDULING
+            </Title>
+            <Typography.Text className="text-gray-600 text-lg">
+              Karmada多集群工作负载调度监控中心
+            </Typography.Text>
+          </div>
+
+          {/* 操作和控制区域 */}
+          <div className="tech-card mb-6">
+            <Flex justify="space-between" align="center" style={{ marginBottom: '16px' }}>
+              <div>
+                <Title level={3} style={{ margin: 0, color: 'var(--text-color)' }}>
+                  集群调度概览
+                </Title>
+                <Typography.Text type="secondary">
+                  实时监控工作负载在多集群中的调度情况
+                </Typography.Text>
+              </div>
+                          <Button 
+              icon={<ReloadOutlined />}
+              onClick={loadData}
+              loading={loading}
+              style={{
+                borderColor: 'var(--tech-primary)',
+                color: 'var(--tech-primary)',
+              }}
+            >
+              刷新
+            </Button>
+            </Flex>
+          </div>
+          
+          <Tabs 
+            activeKey={activeTab} 
+            onChange={setActiveTab}
+            className="tech-tabs"
+          >
+            <TabPane tab="概览" key="overview">
+              {renderOverview()}
+            </TabPane>
+            <TabPane tab="详细信息" key="detail">
+              {renderDetail()}
+            </TabPane>
+          </Tabs>
+        </div>
+      </div>
+    </ScrollContainer>
   );
 };
 
