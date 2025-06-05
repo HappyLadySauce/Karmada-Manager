@@ -46,7 +46,7 @@ import {
 import { CreatePropagationPolicy } from '@/services/propagationpolicy';
 import { GetClusters } from '@/services/cluster';
 import { GetWorkloads } from '@/services/workload';
-import { GetServices } from '@/services/service';
+import { GetServices, GetIngress } from '@/services/service';
 import { GetConfigMaps, GetSecrets } from '@/services/config';
 import { IResponse, PolicyScope, WorkloadKind } from '@/services/base';
 import { stringify } from 'yaml';
@@ -227,9 +227,67 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
     }
   }, [open, scope]);
 
+  // 验证配置是否完整
+  const validateConfiguration = (config: PropagationPolicyConfig): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+    
+    // 验证基本信息
+    if (!config.metadata.name) {
+      errors.push('策略名称不能为空');
+    }
+    
+    if (scope === PolicyScope.Namespace && !config.metadata.namespace) {
+      errors.push('命名空间不能为空');
+    }
+    
+    // 验证资源选择器
+    if (!config.spec.resourceSelectors || config.spec.resourceSelectors.length === 0) {
+      errors.push('至少需要一个资源选择器');
+    } else {
+      config.spec.resourceSelectors.forEach((selector, index) => {
+        if (!selector.apiVersion) {
+          errors.push(`资源选择器 ${index + 1}: API版本不能为空`);
+        }
+        if (!selector.kind) {
+          errors.push(`资源选择器 ${index + 1}: 资源类型不能为空`);
+        }
+        if (!selector.name && (!selector.labelSelector || Object.keys(selector.labelSelector).length === 0)) {
+          errors.push(`资源选择器 ${index + 1}: 必须指定资源名称或标签选择器`);
+        }
+        if (scope === PolicyScope.Namespace && !selector.namespace) {
+          errors.push(`资源选择器 ${index + 1}: 命名空间不能为空`);
+        }
+      });
+    }
+    
+    // 验证集群配置
+    if (!config.spec.placement.clusters || config.spec.placement.clusters.length === 0) {
+      errors.push('至少需要选择一个目标集群');
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  };
+
   const generateYAML = (config: PropagationPolicyConfig) => {
     const kindLabel = scope === PolicyScope.Namespace ? 'PropagationPolicy' : 'ClusterPropagationPolicy';
     const apiVersion = 'policy.karmada.io/v1alpha1';
+
+    // 生成带注释的YAML内容
+    const comments = {
+      header: `# ${kindLabel} - ${config.metadata.name}
+# 描述: Karmada多云传播策略配置
+# 创建时间: ${new Date().toLocaleString('zh-CN')}
+# 作用域: ${scope === PolicyScope.Namespace ? '命名空间级别' : '集群级别'}`,
+      metadata: `# 策略元数据配置`,
+      resourceSelectors: `# 资源选择器 - 指定要传播的Kubernetes资源`,
+      placement: `# 调度配置 - 定义资源如何分发到目标集群`,
+      clusters: `# 目标集群列表`,
+      replicaScheduling: `# 副本调度策略`,
+      advanced: `# 高级配置选项`
+    };
 
     const baseMetadata = {
       name: config.metadata.name,
@@ -246,17 +304,33 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
     };
 
     const spec: any = {
-      resourceSelectors: config.spec.resourceSelectors.map(selector => ({
-        apiVersion: selector.apiVersion,
-        kind: selector.kind,
-        ...(selector.name && { name: selector.name }),
-        ...(selector.namespace && { namespace: selector.namespace }),
-        ...(selector.labelSelector && Object.keys(selector.labelSelector).length > 0 && {
-          labelSelector: {
+      resourceSelectors: config.spec.resourceSelectors.map(selector => {
+        const selectorObj: any = {
+          apiVersion: selector.apiVersion,
+          kind: selector.kind,
+        };
+        
+        // 如果有资源名称，添加name和namespace
+        if (selector.name) {
+          selectorObj.name = selector.name;
+          if (selector.namespace) {
+            selectorObj.namespace = selector.namespace;
+          }
+        }
+        
+        // 如果有标签选择器，添加labelSelector
+        if (selector.labelSelector && Object.keys(selector.labelSelector).length > 0) {
+          selectorObj.labelSelector = {
             matchLabels: selector.labelSelector,
-          },
-        }),
-      })),
+          };
+          // 标签选择器情况下也需要namespace
+          if (selector.namespace) {
+            selectorObj.namespace = selector.namespace;
+          }
+        }
+        
+        return selectorObj;
+      }),
       placement: {
         ...(config.spec.placement.clusters && config.spec.placement.clusters.length > 0 && {
           clusterAffinity: {
@@ -308,15 +382,54 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
       kind: kindLabel,
       metadata: baseMetadata,
       spec,
+      _comments: comments, // 注释信息
     };
   };
 
   const handleNext = async () => {
     try {
+      // 表单验证
       await form.validateFields();
+      
+      // 根据当前步骤进行额外验证
+      if (currentStep === 1) {
+        // 资源配置步骤验证
+        const resourceErrors: string[] = [];
+        policyConfig.spec.resourceSelectors.forEach((selector, index) => {
+          if (!selector.kind) {
+            resourceErrors.push(`资源选择器 ${index + 1}: 请选择资源类型`);
+          }
+          if (!selector.name && (!selector.labelSelector || Object.keys(selector.labelSelector).length === 0)) {
+            resourceErrors.push(`资源选择器 ${index + 1}: 请指定资源名称或配置标签选择器`);
+          }
+          if (scope === PolicyScope.Namespace && !selector.namespace) {
+            resourceErrors.push(`资源选择器 ${index + 1}: 请选择命名空间`);
+          }
+        });
+        
+        if (resourceErrors.length > 0) {
+          message.error(resourceErrors.join('; '));
+          return;
+        }
+      }
+      
+      if (currentStep === 2) {
+        // 调度配置步骤验证
+        if (!policyConfig.spec.placement.clusters || policyConfig.spec.placement.clusters.length === 0) {
+          message.error('请至少选择一个目标集群');
+          return;
+        }
+      }
+      
       if (currentStep < 3) {
         setCurrentStep(currentStep + 1);
       } else {
+        // 最终验证
+        const validation = validateConfiguration(policyConfig);
+        if (!validation.isValid) {
+          message.error(`配置验证失败: ${validation.errors.join('; ')}`);
+          return;
+        }
         await handleSubmit();
       }
     } catch (error) {
@@ -366,6 +479,7 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
           {
             apiVersion: 'apps/v1',
             kind: 'Deployment',
+            name: '', // 默认为名称模式，设置空字符串
           },
         ],
         placement: {
@@ -414,8 +528,9 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
   const addResourceSelector = () => {
     const newConfig = { ...policyConfig };
     newConfig.spec.resourceSelectors.push({
-      apiVersion: 'v1',
-      kind: 'Service',
+      apiVersion: 'apps/v1',
+      kind: 'Deployment',
+      name: '', // 默认为名称模式，设置空字符串
     });
     setPolicyConfig(newConfig);
   };
@@ -464,6 +579,10 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
             return await GetServices({
               namespace: selector.namespace
             });
+          case 'Ingress':
+            return await GetIngress({
+              namespace: selector.namespace
+            });
           case 'ConfigMap':
             return await GetConfigMaps({
               namespace: selector.namespace
@@ -482,6 +601,16 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
               namespace: selector.namespace,
               kind: WorkloadKind.Cronjob
             });
+          case 'StatefulSet':
+            return await GetWorkloads({
+              namespace: selector.namespace,
+              kind: WorkloadKind.Statefulset
+            });
+          case 'DaemonSet':
+            return await GetWorkloads({
+              namespace: selector.namespace,
+              kind: WorkloadKind.Daemonset
+            });
           default:
             return null;
         }
@@ -497,10 +626,13 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
       const data = resourceData.data as any;
       
       // 根据不同的API响应格式获取数据
-      if (selector.kind === 'Deployment' || selector.kind === 'Job' || selector.kind === 'CronJob') {
+      if (selector.kind === 'Deployment' || selector.kind === 'Job' || selector.kind === 'CronJob' || 
+          selector.kind === 'StatefulSet' || selector.kind === 'DaemonSet') {
         items = data.deployments || data.jobs || data.items || [];
       } else if (selector.kind === 'Service') {
         items = data.services || [];
+      } else if (selector.kind === 'Ingress') {
+        items = data.items || [];
       } else if (selector.kind === 'ConfigMap') {
         items = data.items || [];
       } else if (selector.kind === 'Secret') {
@@ -716,50 +848,115 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
 
             <Row gutter={[16, 8]}>
               <Col span={12}>
+                <Form.Item label="资源类型" required style={{ marginBottom: 8 }}>
+                  <Select
+                    size="small"
+                    value={selector.kind}
+                    onChange={(value) => {
+                      // 根据资源类型自动设置正确的API版本
+                      const getApiVersionForKind = (kind: string) => {
+                        switch (kind) {
+                          case 'Service':
+                          case 'ConfigMap':
+                          case 'Secret':
+                          case 'Namespace':
+                            return 'v1';
+                          case 'Deployment':
+                          case 'StatefulSet':
+                          case 'DaemonSet':
+                          case 'ReplicaSet':
+                            return 'apps/v1';
+                          case 'Ingress':
+                            return 'networking.k8s.io/v1';
+                          case 'Job':
+                          case 'CronJob':
+                            return 'batch/v1';
+                          case 'PersistentVolume':
+                          case 'PersistentVolumeClaim':
+                            return 'v1';
+                          case 'StorageClass':
+                            return 'storage.k8s.io/v1';
+                          default:
+                            return 'v1';
+                        }
+                      };
+                      
+                      const apiVersion = getApiVersionForKind(value);
+                      updateResourceSelector(selectorIndex, 'kind', value);
+                      updateResourceSelector(selectorIndex, 'apiVersion', apiVersion);
+                    }}
+                    style={{ width: '100%' }}
+                  >
+                    <Option value="Deployment">Deployment (应用部署)</Option>
+                    <Option value="Service">Service (服务)</Option>
+                    <Option value="Ingress">Ingress (入口)</Option>
+                    <Option value="ConfigMap">ConfigMap (配置映射)</Option>
+                    <Option value="Secret">Secret (密钥)</Option>
+                    <Option value="Job">Job (任务)</Option>
+                    <Option value="CronJob">CronJob (定时任务)</Option>
+                    <Option value="StatefulSet">StatefulSet (有状态集)</Option>
+                    <Option value="DaemonSet">DaemonSet (守护集)</Option>
+                    <Option value="PersistentVolumeClaim">PersistentVolumeClaim (存储卷声明)</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
                 <Form.Item label="API版本" required style={{ marginBottom: 8 }}>
                   <Select
                     size="small"
                     value={selector.apiVersion}
                     onChange={(value) => updateResourceSelector(selectorIndex, 'apiVersion', value)}
                     style={{ width: '100%' }}
+                    disabled
                   >
                     <Option value="v1">v1</Option>
                     <Option value="apps/v1">apps/v1</Option>
                     <Option value="networking.k8s.io/v1">networking.k8s.io/v1</Option>
                     <Option value="batch/v1">batch/v1</Option>
+                    <Option value="storage.k8s.io/v1">storage.k8s.io/v1</Option>
                   </Select>
+                  <Text type="secondary" style={{ 
+                    fontSize: '11px', 
+                    display: 'block', 
+                    marginTop: '4px',
+                    fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif'
+                  }}>
+                    ✅ 已根据资源类型自动选择正确的API版本
+                  </Text>
                 </Form.Item>
               </Col>
-              <Col span={12}>
-                <Form.Item label="资源类型" required style={{ marginBottom: 8 }}>
-                  <Select
+            </Row>
+
+            {/* 选择模式：资源名称 vs 标签选择器 */}
+            <Row gutter={[16, 8]}>
+              <Col span={24}>
+                <Form.Item label="选择模式" style={{ marginBottom: 8 }}>
+                  <Radio.Group
                     size="small"
-                    value={selector.kind}
-                    onChange={(value) => updateResourceSelector(selectorIndex, 'kind', value)}
-                    style={{ width: '100%' }}
+                    value={
+                      // 简化判断逻辑：有name属性（不管是否为空）就是名称模式，否则是标签模式
+                      selector.name !== undefined ? 'name' : 'label'
+                    }
+                    onChange={(e) => {
+                      if (e.target.value === 'name') {
+                        // 切换到名称模式：设置name为空字符串，清除labelSelector
+                        updateResourceSelector(selectorIndex, 'name', '');
+                        updateResourceSelector(selectorIndex, 'labelSelector', undefined);
+                      } else {
+                        // 切换到标签模式：清除name，设置labelSelector为空对象
+                        updateResourceSelector(selectorIndex, 'name', undefined);
+                        updateResourceSelector(selectorIndex, 'labelSelector', {});
+                      }
+                    }}
                   >
-                    <Option value="Deployment">Deployment</Option>
-                    <Option value="Service">Service</Option>
-                    <Option value="ConfigMap">ConfigMap</Option>
-                    <Option value="Secret">Secret</Option>
-                    <Option value="Ingress">Ingress</Option>
-                    <Option value="Job">Job</Option>
-                    <Option value="CronJob">CronJob</Option>
-                  </Select>
+                    <Radio value="name">指定资源名称</Radio>
+                    <Radio value="label">使用标签选择器</Radio>
+                  </Radio.Group>
                 </Form.Item>
               </Col>
             </Row>
 
             <Row gutter={[16, 8]}>
-              <Col span={12}>
-                <Form.Item label="资源名称" required style={{ marginBottom: 8 }}>
-                  <ResourceNameSelect
-                    selectorIndex={selectorIndex}
-                    selector={selector}
-                    updateResourceSelector={updateResourceSelector}
-                  />
-                </Form.Item>
-              </Col>
               <Col span={12}>
                 <Form.Item label="命名空间" required style={{ marginBottom: 8 }}>
                   <Select
@@ -782,65 +979,117 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
                   </Select>
                 </Form.Item>
               </Col>
+              
+              {/* 根据选择模式显示不同的输入方式 - 使用与Radio.Group相同的判断逻辑 */}
+              <Col span={12}>
+                {selector.name !== undefined ? (
+                  <Form.Item label="资源名称" required style={{ marginBottom: 8 }}>
+                    <ResourceNameSelect
+                      selectorIndex={selectorIndex}
+                      selector={selector}
+                      updateResourceSelector={updateResourceSelector}
+                    />
+                  </Form.Item>
+                ) : (
+                  <Form.Item label="标签匹配" style={{ marginBottom: 8 }}>
+                    <div style={{ 
+                      border: '1px dashed #d9d9d9', 
+                      borderRadius: 4, 
+                      padding: 8,
+                      backgroundColor: '#fafafa',
+                      minHeight: 32,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Text type="secondary" style={{ fontSize: '12px', fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif' }}>
+                        {selector.labelSelector && Object.keys(selector.labelSelector).length > 0
+                          ? `${Object.keys(selector.labelSelector).length} 个标签条件`
+                          : '请在下方配置标签选择器'
+                        }
+                      </Text>
+                    </div>
+                  </Form.Item>
+                )}
+              </Col>
             </Row>
 
-            <Collapse ghost size="small">
-              <Panel header="标签选择器" key="labelSelector">
-                <Button
-                  type="dashed"
-                  icon={<PlusOutlined />}
-                  onClick={() => {
-                    if (!selector.labelSelector) {
-                      updateResourceSelector(selectorIndex, 'labelSelector', {});
-                    }
-                    const key = `label-${Date.now()}`;
-                    updateResourceSelector(selectorIndex, `labelSelector.${key}`, '');
-                  }}
-                  style={{ marginBottom: 8 }}
-                  size="small"
-                >
-                  添加标签
-                </Button>
-                {selector.labelSelector && Object.entries(selector.labelSelector).map(([key, value]) => (
-                  <Row key={key} gutter={8} style={{ marginBottom: 8 }}>
-                    <Col span={10}>
-                      <Input
-                        size="small"
-                        placeholder="标签键"
-                        value={key}
-                        onChange={(e) => {
-                          const newSelector = { ...selector };
-                          delete newSelector.labelSelector![key];
-                          newSelector.labelSelector![e.target.value] = value;
-                          updateResourceSelector(selectorIndex, 'labelSelector', newSelector.labelSelector);
-                        }}
-                      />
-                    </Col>
-                    <Col span={10}>
-                      <Input
-                        size="small"
-                        placeholder="标签值"
-                        value={value}
-                        onChange={(e) => updateResourceSelector(selectorIndex, `labelSelector.${key}`, e.target.value)}
-                      />
-                    </Col>
-                    <Col span={4}>
-                      <Button
-                        type="text"
-                        danger
-                        size="small"
-                        icon={<DeleteOutlined />}
-                        onClick={() => {
-                          const newSelector = { ...selector };
-                          delete newSelector.labelSelector![key];
-                          updateResourceSelector(selectorIndex, 'labelSelector', newSelector.labelSelector);
-                        }}
-                      />
-                    </Col>
-                  </Row>
-                ))}
-              </Panel>
-            </Collapse>
+            {/* 标签选择器面板 - 只在标签模式下显示 */}
+            {selector.name === undefined && (
+              <Collapse ghost size="small">
+                <Panel header="标签选择器" key="labelSelector">
+                  <Button
+                    type="dashed"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      if (!selector.labelSelector) {
+                        updateResourceSelector(selectorIndex, 'labelSelector', {});
+                      }
+                      const key = `label-${Date.now()}`;
+                      updateResourceSelector(selectorIndex, `labelSelector.${key}`, '');
+                    }}
+                    style={{ marginBottom: 8 }}
+                    size="small"
+                  >
+                    添加标签
+                  </Button>
+                  {selector.labelSelector && Object.entries(selector.labelSelector).map(([key, value], index) => (
+                    <Row key={`${key}-${index}`} gutter={8} style={{ marginBottom: 8 }}>
+                      <Col span={10}>
+                        <Input
+                          size="small"
+                          placeholder="标签键"
+                          value={key}
+                          style={{ fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif' }}
+                          onChange={(e) => {
+                            const newLabelSelector = { ...selector.labelSelector };
+                            if (key !== e.target.value) {
+                              delete newLabelSelector[key];
+                              newLabelSelector[e.target.value] = value;
+                              updateResourceSelector(selectorIndex, 'labelSelector', newLabelSelector);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            if (e.target.value !== key) {
+                              const newLabelSelector = { ...selector.labelSelector };
+                              delete newLabelSelector[key];
+                              newLabelSelector[e.target.value] = value;
+                              updateResourceSelector(selectorIndex, 'labelSelector', newLabelSelector);
+                            }
+                          }}
+                        />
+                      </Col>
+                      <Col span={10}>
+                        <Input
+                          size="small"
+                          placeholder="标签值"
+                          value={value as string}
+                          style={{ fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif' }}
+                          onChange={(e) => {
+                            const newLabelSelector = { ...selector.labelSelector };
+                            newLabelSelector[key] = e.target.value;
+                            updateResourceSelector(selectorIndex, 'labelSelector', newLabelSelector);
+                          }}
+                        />
+                      </Col>
+                      <Col span={4}>
+                        <Button
+                          type="text"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          onClick={() => {
+                            const newLabelSelector = { ...selector.labelSelector };
+                            delete newLabelSelector[key];
+                            updateResourceSelector(selectorIndex, 'labelSelector', newLabelSelector);
+                          }}
+                        />
+                      </Col>
+                    </Row>
+                  ))}
+                </Panel>
+              </Collapse>
+            )}
           </div>
         ))}
         
@@ -909,7 +1158,7 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
         <Alert
           message="副本调度配置说明"
           description={
-            <div>
+            <div style={{ fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif' }}>
               <div><strong>分发偏好：</strong></div>
               <div>• <strong>聚合</strong>：副本将被聚合分发，尽量减少分布的集群数量</div>
               <div>• <strong>加权</strong>：副本将按权重比例分发到各个集群</div>
@@ -921,7 +1170,11 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
           }
           type="info"
           showIcon
-          style={{ marginBottom: '16px', fontSize: '12px' }}
+          style={{ 
+            marginBottom: '16px', 
+            fontSize: '12px',
+            fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif'
+          }}
         />
         <Row gutter={[16, 8]}>
           <Col span={12}>
@@ -998,7 +1251,10 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
               })}
             </Row>
             <div style={{ marginTop: '8px' }}>
-              <Text type="secondary" style={{ fontSize: '11px' }}>
+              <Text type="secondary" style={{ 
+                fontSize: '11px',
+                fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif'
+              }}>
                 💡 提示：当使用"加权"分发时，副本将按照设定的权重比例分配到各个集群。例如，权重 2:1 表示第一个集群分配到的副本数是第二个集群的两倍。
               </Text>
             </div>
@@ -1040,22 +1296,89 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
   );
 
   const renderPreview = () => {
+    const validation = validateConfiguration(policyConfig);
     const yamlObject = generateYAML(policyConfig);
-    const yamlContent = stringify(yamlObject);
+    
+    // 生成带注释的YAML内容
+    const generateYAMLWithComments = (obj: any) => {
+      // 移除内部注释属性
+      const { _comments, ...cleanObj } = obj;
+      
+      // 基础YAML内容
+      let yamlContent = stringify(cleanObj);
+      
+      // 添加头部注释
+      const headerComment = `# ${obj.kind} - ${obj.metadata.name}
+# 描述: Karmada多云传播策略配置
+# 创建时间: ${new Date().toLocaleString('zh-CN')}
+# 作用域: ${scope === PolicyScope.Namespace ? '命名空间级别' : '集群级别'}
+# 资源类型: ${policyConfig.spec.resourceSelectors.map(s => s.kind).join(', ')}
+# 目标集群: ${policyConfig.spec.placement.clusters?.join(', ') || '未指定'}
+
+`;
+      
+      // 在关键部分添加注释
+      yamlContent = yamlContent
+        .replace('apiVersion:', `${headerComment}apiVersion:`)
+        .replace('metadata:', '# 策略元数据配置\nmetadata:')
+        .replace('spec:', '# 策略规格配置\nspec:')
+        .replace('  resourceSelectors:', '  # 资源选择器 - 指定要传播的Kubernetes资源\n  resourceSelectors:')
+        .replace('  placement:', '  # 调度配置 - 定义资源如何分发到目标集群\n  placement:')
+        .replace('    clusterAffinity:', '    # 目标集群列表\n    clusterAffinity:')
+        .replace('    replicaScheduling:', '    # 副本调度策略\n    replicaScheduling:');
+      
+      // 如果有高级配置，添加注释
+      if (policyConfig.spec.conflictResolution || policyConfig.spec.priority !== undefined || policyConfig.spec.failover) {
+        yamlContent = yamlContent.replace('  conflictResolution:', '  # 高级配置选项\n  conflictResolution:');
+        yamlContent = yamlContent.replace('  priority:', '  # 策略优先级\n  priority:');
+        yamlContent = yamlContent.replace('  failover:', '  # 故障转移配置\n  failover:');
+      }
+      
+      return yamlContent;
+    };
+    
+    const yamlContent = generateYAMLWithComments(yamlObject);
     
     // 计算资源信息显示
     const getResourcesInfo = () => {
       const resourceCount = policyConfig.spec.resourceSelectors.length;
       const clusterCount = policyConfig.spec.placement.clusters?.length || 0;
-      return `资源选择器: ${resourceCount} | 目标集群: ${clusterCount}`;
+      const resourceTypes = policyConfig.spec.resourceSelectors.map(s => s.kind).join(', ');
+      return `资源选择器: ${resourceCount} (${resourceTypes}) | 目标集群: ${clusterCount}`;
+    };
+    
+    // 获取详细配置信息
+    const getConfigDetails = () => {
+      const details = [];
+      
+      // 调度策略
+      const replicaScheduling = policyConfig.spec.placement.replicaScheduling;
+      if (replicaScheduling) {
+        const preference = replicaScheduling.replicaDivisionPreference === 'Aggregated' ? '聚合' : '加权';
+        const type = replicaScheduling.replicaSchedulingType === 'Duplicated' ? '复制' : '分割';
+        details.push(`调度策略: ${preference}/${type}`);
+      }
+      
+      // 冲突解决
+      if (policyConfig.spec.conflictResolution) {
+        const resolution = policyConfig.spec.conflictResolution === 'Abort' ? '中止' : '覆盖';
+        details.push(`冲突解决: ${resolution}`);
+      }
+      
+      // 优先级
+      if (policyConfig.spec.priority !== undefined) {
+        details.push(`优先级: ${policyConfig.spec.priority}`);
+      }
+      
+      return details.join(' | ');
     };
     
     return (
-      <div style={{ height: '500px' }}>
+      <div style={{ height: '450px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
           <Title level={4} style={{ margin: 0 }}>
             <Space>
-              <CheckCircleOutlined style={{ color: '#52c41a' }} />
+              <CheckCircleOutlined style={{ color: validation.isValid ? '#52c41a' : '#ff4d4f' }} />
               配置预览
             </Space>
           </Title>
@@ -1070,25 +1393,67 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
           </Button>
         </Space>
         
-        <Alert
-          message={`即将创建 ${getScopeLabel(scope)}: ${policyConfig.metadata.name}`}
-          description={`${scope === PolicyScope.Namespace ? `命名空间: ${policyConfig.metadata.namespace} | ` : ''}${getResourcesInfo()}`}
-          type="success"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
+        {/* 配置验证状态 */}
+        {validation.isValid ? (
+          <Alert
+            message={`✅ 配置验证通过 - 即将创建 ${getScopeLabel(scope)}: ${policyConfig.metadata.name}`}
+            description={
+              <div>
+                <div>{scope === PolicyScope.Namespace ? `命名空间: ${policyConfig.metadata.namespace} | ` : ''}${getResourcesInfo()}</div>
+                <div style={{ 
+                  marginTop: 4, 
+                  fontSize: '12px', 
+                  color: '#666',
+                  fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif'
+                }}>{getConfigDetails()}</div>
+              </div>
+            }
+            type="success"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        ) : (
+          <Alert
+            message="❌ 配置验证失败"
+            description={
+              <div>
+                <div style={{ marginBottom: 8 }}>请修复以下问题后再创建：</div>
+                <ul style={{ 
+                  margin: 0, 
+                  paddingLeft: 20,
+                  fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif'
+                }}>
+                  {validation.errors.map((error, index) => (
+                    <li key={index} style={{ fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif' }}>
+                      {error}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            }
+            type="error"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        )}
         
-        <TextArea
-          value={yamlContent}
-          rows={18}
-          readOnly
-          style={{ 
-            fontFamily: '"Microsoft YaHei", "微软雅黑", "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", Arial, sans-serif',
-            fontSize: '13px',
-            lineHeight: '1.4',
-            backgroundColor: '#f6f8fa',
-          }}
-        />
+        
+        <div style={{ flex: 1, overflow: 'auto', border: '1px solid #d9d9d9', borderRadius: '6px' }}>
+          <TextArea
+            value={yamlContent}
+            readOnly
+            style={{ 
+              fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif',
+              fontSize: '12px',
+              lineHeight: '1.5',
+              backgroundColor: '#f6f8fa',
+              height: '100%',
+              resize: 'none',
+              border: 'none',
+              borderRadius: '6px'
+            }}
+          />
+        </div>
       </div>
     );
   };

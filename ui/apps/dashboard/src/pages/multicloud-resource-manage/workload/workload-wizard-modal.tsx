@@ -135,6 +135,14 @@ interface WorkloadSpecificConfig {
   timezone?: string;
 }
 
+interface ImageRegistryConfig {
+  enabled: boolean;
+  registry: string;
+  username?: string;
+  password?: string;
+  secretName?: string;
+}
+
 interface WorkloadConfig {
   metadata: {
     name: string;
@@ -148,6 +156,7 @@ interface WorkloadConfig {
     restartPolicy?: string;
     schedule?: string;
     nodeSelector?: Record<string, string>;
+    imageRegistry?: ImageRegistryConfig;
   } & WorkloadSpecificConfig;
 }
 
@@ -330,6 +339,9 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
                 spec: {
                   containers: containerSpecs,
                   restartPolicy: 'OnFailure',
+                  ...(config.spec.imageRegistry?.enabled && config.spec.imageRegistry?.secretName && {
+                    imagePullSecrets: [{ name: config.spec.imageRegistry.secretName }],
+                  }),
                   ...(Object.keys(config.spec.nodeSelector || {}).length > 0 && {
                     nodeSelector: config.spec.nodeSelector,
                   }),
@@ -363,6 +375,9 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
             spec: {
               containers: containerSpecs,
               restartPolicy: config.spec.restartPolicy || 'Never',
+              ...(config.spec.imageRegistry?.enabled && config.spec.imageRegistry?.secretName && {
+                imagePullSecrets: [{ name: config.spec.imageRegistry.secretName }],
+              }),
               ...(Object.keys(config.spec.nodeSelector || {}).length > 0 && {
                 nodeSelector: config.spec.nodeSelector,
               }),
@@ -383,6 +398,9 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
         },
         spec: {
           containers: containerSpecs,
+          ...(config.spec.imageRegistry?.enabled && config.spec.imageRegistry?.secretName && {
+            imagePullSecrets: [{ name: config.spec.imageRegistry.secretName }],
+          }),
           ...(Object.keys(config.spec.nodeSelector || {}).length > 0 && {
             nodeSelector: config.spec.nodeSelector,
           }),
@@ -969,11 +987,63 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
               </Form.Item>
             </Col>
             <Col span={10}>
-              <Form.Item label="镜像" required>
+              <Form.Item 
+                label="镜像" 
+                required
+                extra={
+                  workloadConfig.spec.imageRegistry?.enabled && workloadConfig.spec.imageRegistry?.registry && (
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      💡 将使用镜像仓库: {workloadConfig.spec.imageRegistry.registry}
+                      {!container.image.includes(workloadConfig.spec.imageRegistry.registry) && container.image && (
+                        <Button
+                          type="link"
+                          size="small"
+                          style={{ padding: '0 4px', fontSize: '12px' }}
+                          onClick={() => {
+                            if (!container.image.includes('/')) {
+                              updateContainer(containerIndex, 'image', `${workloadConfig.spec.imageRegistry!.registry}/${container.image}`);
+                            }
+                          }}
+                        >
+                          应用前缀
+                        </Button>
+                      )}
+                    </div>
+                  )
+                }
+              >
                 <Input
                   value={container.image}
                   onChange={(e) => updateContainer(containerIndex, 'image', e.target.value)}
-                  placeholder="例如: nginx:latest"
+                  placeholder={
+                    workloadConfig.spec.imageRegistry?.enabled && workloadConfig.spec.imageRegistry?.registry
+                      ? `例如: ${workloadConfig.spec.imageRegistry.registry}/nginx:latest`
+                      : "例如: nginx:latest"
+                  }
+                  addonAfter={
+                    <Select
+                      placeholder="常用镜像"
+                      style={{ width: 120 }}
+                      onSelect={(value) => {
+                        // 如果启用了镜像仓库，自动添加前缀
+                        const finalImage = workloadConfig.spec.imageRegistry?.enabled && workloadConfig.spec.imageRegistry?.registry
+                          ? `${workloadConfig.spec.imageRegistry.registry}/${value}`
+                          : value;
+                        updateContainer(containerIndex, 'image', finalImage);
+                      }}
+                    >
+                      <Option value="nginx:latest">Nginx</Option>
+                      <Option value="httpd:latest">Apache</Option>
+                      <Option value="redis:latest">Redis</Option>
+                      <Option value="mysql:8.0">MySQL</Option>
+                      <Option value="postgres:latest">PostgreSQL</Option>
+                      <Option value="node:lts">Node.js</Option>
+                      <Option value="python:3.9">Python</Option>
+                      <Option value="openjdk:11">Java</Option>
+                      <Option value="alpine:latest">Alpine</Option>
+                      <Option value="busybox:latest">BusyBox</Option>
+                    </Select>
+                  }
                 />
               </Form.Item>
             </Col>
@@ -1151,20 +1221,83 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
               header={
                 <Space>
                   <DatabaseOutlined />
-                  <Text>资源限制</Text>
+                  <Text>资源配置</Text>
+                  <Tooltip title="配置容器的CPU和内存资源请求和限制">
+                    <InfoCircleOutlined />
+                  </Tooltip>
                 </Space>
               } 
               key="resources"
             >
+              {/* 资源预设模板 */}
+              <div style={{ marginBottom: 16, padding: '12px', backgroundColor: '#f0f2f5', borderRadius: '6px' }}>
+                <Text strong style={{ marginRight: 8, display: 'block', marginBottom: 8 }}>🎯 快速配置:</Text>
+                <Space wrap>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      updateContainer(containerIndex, 'resources', {
+                        requests: { cpu: '50m', memory: '64Mi' },
+                        limits: { cpu: '100m', memory: '128Mi' }
+                      });
+                    }}
+                  >
+                    微型应用
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      updateContainer(containerIndex, 'resources', {
+                        requests: { cpu: '100m', memory: '128Mi' },
+                        limits: { cpu: '500m', memory: '512Mi' }
+                      });
+                    }}
+                  >
+                    小型应用
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      updateContainer(containerIndex, 'resources', {
+                        requests: { cpu: '250m', memory: '256Mi' },
+                        limits: { cpu: '1000m', memory: '1Gi' }
+                      });
+                    }}
+                  >
+                    中型应用
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      updateContainer(containerIndex, 'resources', {
+                        requests: { cpu: '500m', memory: '512Mi' },
+                        limits: { cpu: '2000m', memory: '2Gi' }
+                      });
+                    }}
+                  >
+                    大型应用
+                  </Button>
+                </Space>
+              </div>
+              
               <Row gutter={16}>
                 <Col span={12}>
-                  <Text strong>资源请求</Text>
-                  <Form.Item label="CPU" style={{ marginTop: 8 }}>
+                  <Alert
+                    message="📋 资源请求 (Requests)"
+                    description="容器运行的最小资源需求，调度器根据此值为Pod选择节点"
+                    type="info"
+                    style={{ marginBottom: 12, fontSize: '12px' }}
+                  />
+                  <Form.Item label="CPU">
                     <Input
                       value={container.resources.requests.cpu}
                       onChange={(e) => updateContainer(containerIndex, 'resources.requests.cpu', e.target.value)}
-                      placeholder="100m"
-                      addonAfter="millicores"
+                      placeholder="100m (0.1核心)"
+                      addonAfter={
+                        <Tooltip title="m=毫核心, 1000m=1核心">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      }
                     />
                   </Form.Item>
                   <Form.Item label="内存">
@@ -1172,18 +1305,31 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
                       value={container.resources.requests.memory}
                       onChange={(e) => updateContainer(containerIndex, 'resources.requests.memory', e.target.value)}
                       placeholder="128Mi"
-                      addonAfter="Mi/Gi"
+                      addonAfter={
+                        <Tooltip title="支持单位: Ki, Mi, Gi, Ti">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      }
                     />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Text strong>资源限制</Text>
-                  <Form.Item label="CPU" style={{ marginTop: 8 }}>
+                  <Alert
+                    message="⚠️ 资源限制 (Limits)"
+                    description="容器可使用的最大资源，超出限制将被终止或限流"
+                    type="warning"
+                    style={{ marginBottom: 12, fontSize: '12px' }}
+                  />
+                  <Form.Item label="CPU">
                     <Input
                       value={container.resources.limits.cpu}
                       onChange={(e) => updateContainer(containerIndex, 'resources.limits.cpu', e.target.value)}
-                      placeholder="500m"
-                      addonAfter="millicores"
+                      placeholder="500m (0.5核心)"
+                      addonAfter={
+                        <Tooltip title="CPU限制通过CFS配额实现">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      }
                     />
                   </Form.Item>
                   <Form.Item label="内存">
@@ -1191,7 +1337,11 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
                       value={container.resources.limits.memory}
                       onChange={(e) => updateContainer(containerIndex, 'resources.limits.memory', e.target.value)}
                       placeholder="512Mi"
-                      addonAfter="Mi/Gi"
+                      addonAfter={
+                        <Tooltip title="超出内存限制会导致Pod被杀死">
+                          <InfoCircleOutlined />
+                        </Tooltip>
+                      }
                     />
                   </Form.Item>
                 </Col>
@@ -1570,6 +1720,113 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
           ))}
         </Form.Item>
       </Card>
+
+      {/* 镜像仓库配置 */}
+      <Card title="🐳 镜像仓库配置" size="small" style={{ marginBottom: 16 }}>
+        <Form.Item>
+          <Space>
+            <Switch
+              checked={workloadConfig.spec.imageRegistry?.enabled || false}
+              onChange={(checked) => {
+                if (checked) {
+                  updateWorkloadConfig('spec.imageRegistry', {
+                    enabled: true,
+                    registry: '',
+                    secretName: 'image-pull-secret'
+                  });
+                } else {
+                  updateWorkloadConfig('spec.imageRegistry', { enabled: false });
+                }
+              }}
+            />
+            <Text strong>启用私有镜像仓库</Text>
+            <Tooltip title="配置私有镜像仓库，自动为Pod添加imagePullSecrets">
+              <InfoCircleOutlined />
+            </Tooltip>
+          </Space>
+        </Form.Item>
+
+        {workloadConfig.spec.imageRegistry?.enabled && (
+          <>
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item label="镜像仓库地址" required>
+                  <Input
+                    placeholder="例如: registry.example.com"
+                    value={workloadConfig.spec.imageRegistry?.registry || ''}
+                    onChange={(e) => updateWorkloadConfig('spec.imageRegistry.registry', e.target.value)}
+                    addonBefore="https://"
+                  />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item label="Secret名称">
+                  <Input
+                    placeholder="镜像拉取密钥名称"
+                    value={workloadConfig.spec.imageRegistry?.secretName || 'image-pull-secret'}
+                    onChange={(e) => updateWorkloadConfig('spec.imageRegistry.secretName', e.target.value)}
+                  />
+                </Form.Item>
+              </Col>
+            </Row>
+
+            <Alert
+              message="💡 镜像仓库配置提示"
+              description={
+                <div>
+                  <p style={{ margin: '4px 0' }}>
+                    1. 请确保在目标集群中已创建对应的Docker Registry Secret
+                  </p>
+                  <p style={{ margin: '4px 0' }}>
+                    2. 创建Secret命令: 
+                    <code style={{ background: '#f0f0f0', padding: '2px 4px', margin: '0 4px' }}>
+                      kubectl create secret docker-registry {workloadConfig.spec.imageRegistry?.secretName || 'image-pull-secret'} 
+                      --docker-server={workloadConfig.spec.imageRegistry?.registry || 'your-registry'} 
+                      --docker-username=&lt;username&gt; --docker-password=&lt;password&gt;
+                    </code>
+                  </p>
+                  <p style={{ margin: '4px 0' }}>
+                    3. 容器镜像将自动添加仓库前缀，如: {workloadConfig.spec.imageRegistry?.registry || 'registry.example.com'}/nginx:latest
+                  </p>
+                </div>
+              }
+              type="info"
+              style={{ marginTop: 12 }}
+            />
+
+            {/* 快速镜像前缀应用 */}
+            <div style={{ marginTop: 16 }}>
+              <Text strong style={{ marginBottom: 8, display: 'block' }}>快速应用镜像前缀:</Text>
+              <Button
+                size="small"
+                type="dashed"
+                onClick={() => {
+                  const registry = workloadConfig.spec.imageRegistry?.registry;
+                  if (!registry) {
+                    message.warning('请先设置镜像仓库地址');
+                    return;
+                  }
+                  
+                  const newConfig = { ...workloadConfig };
+                  newConfig.spec.containers.forEach((container, index) => {
+                    if (container.image && !container.image.includes('/')) {
+                      // 只对没有仓库前缀的镜像添加前缀
+                      newConfig.spec.containers[index].image = `${registry}/${container.image}`;
+                    }
+                  });
+                  setWorkloadConfig(newConfig);
+                  message.success('已为所有容器镜像添加仓库前缀');
+                }}
+              >
+                🔄 为所有容器镜像添加仓库前缀
+              </Button>
+              <Text type="secondary" style={{ marginLeft: 8, fontSize: '12px' }}>
+                将自动为没有仓库前缀的镜像添加 {workloadConfig.spec.imageRegistry?.registry || 'registry.example.com'} 前缀
+              </Text>
+            </div>
+          </>
+        )}
+      </Card>
     </div>
   );
 
@@ -1611,25 +1868,422 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
           </Button>
         </Space>
         
-        <Alert
-          message={`即将创建 ${getWorkloadKindLabel(kind)}: ${workloadConfig.metadata.name}`}
-          description={`命名空间: ${workloadConfig.metadata.namespace} | 容器数: ${workloadConfig.spec.containers.length} | ${getReplicasInfo()}`}
-          type="success"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
+          gap: '16px', 
+          marginBottom: '24px' 
+        }}>
+          <Card 
+            size="small" 
+            style={{ 
+              background: 'linear-gradient(135deg, #f6ffed 0%, #f6ffed 100%)',
+              border: '1px solid #b7eb8f',
+              borderRadius: '8px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ 
+                width: '36px', 
+                height: '36px', 
+                background: '#52c41a', 
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '16px'
+              }}>
+                {getWorkloadIcon(kind)}
+              </div>
+              <div>
+                <Text strong style={{ fontSize: '14px', color: '#389e0d' }}>
+                  {getWorkloadKindLabel(kind)}
+                </Text>
+                <div style={{ fontSize: '12px', color: '#52c41a' }}>
+                  {workloadConfig.metadata.name} • {workloadConfig.metadata.namespace}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card 
+            size="small" 
+            style={{ 
+              background: 'linear-gradient(135deg, #e6f7ff 0%, #e6f7ff 100%)',
+              border: '1px solid #91d5ff',
+              borderRadius: '8px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ 
+                width: '36px', 
+                height: '36px', 
+                background: '#1890ff', 
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '16px'
+              }}>
+                📦
+              </div>
+              <div>
+                <Text strong style={{ fontSize: '14px', color: '#0050b3' }}>
+                  配置摘要
+                </Text>
+                <div style={{ fontSize: '12px', color: '#1890ff' }}>
+                  {workloadConfig.spec.containers.length} 个容器 • {getReplicasInfo()}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <Card 
+            size="small" 
+            style={{ 
+              background: `linear-gradient(135deg, ${
+                workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) && 
+                workloadConfig.spec.imageRegistry?.enabled 
+                  ? '#f6ffed' : '#fff7e6'
+              } 0%, ${
+                workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) && 
+                workloadConfig.spec.imageRegistry?.enabled 
+                  ? '#f6ffed' : '#fff7e6'
+              } 100%)`,
+              border: `1px solid ${
+                workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) && 
+                workloadConfig.spec.imageRegistry?.enabled 
+                  ? '#b7eb8f' : '#ffd591'
+              }`,
+              borderRadius: '8px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ 
+                width: '36px', 
+                height: '36px', 
+                background: workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) && 
+                            workloadConfig.spec.imageRegistry?.enabled ? '#52c41a' : '#fa8c16', 
+                borderRadius: '50%', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '16px'
+              }}>
+                🔧
+              </div>
+              <div>
+                <Text strong style={{ 
+                  fontSize: '14px', 
+                  color: workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) && 
+                         workloadConfig.spec.imageRegistry?.enabled ? '#389e0d' : '#d46b08' 
+                }}>
+                  配置状态
+                </Text>
+                <div style={{ fontSize: '12px', lineHeight: '1.4' }}>
+                  <div style={{ color: '#52c41a' }}>✅ 资源配置</div>
+                  <div style={{ color: workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) ? '#52c41a' : '#fa8c16' }}>
+                    {workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) ? '✅' : '⚠️'} 健康检查
+                  </div>
+                  <div style={{ color: workloadConfig.spec.imageRegistry?.enabled ? '#52c41a' : '#8c8c8c' }}>
+                    {workloadConfig.spec.imageRegistry?.enabled ? '✅' : '○'} 镜像仓库
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
         
-        <TextArea
-          value={yamlContent}
-          rows={18}
-          readOnly
+                {/* 详细配置摘要 */}
+        <Collapse 
+          ghost 
           style={{ 
-            fontFamily: '"Microsoft YaHei", "微软雅黑", "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", Arial, sans-serif',
-            fontSize: '13px',
-            lineHeight: '1.4',
-            backgroundColor: '#f6f8fa',
+            background: '#fafafa', 
+            border: '1px solid #e8e8e8', 
+            borderRadius: '8px',
+            marginBottom: '20px'
           }}
-        />
+        >
+          <Panel 
+            header={
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '16px' }}>📋</span>
+                <Text strong style={{ fontSize: '15px' }}>配置详情</Text>
+                <Badge 
+                  count={workloadConfig.spec.containers.length} 
+                  style={{ backgroundColor: '#1890ff' }}
+                  title="容器数量"
+                />
+              </div>
+            } 
+            key="config-details"
+          >
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+              gap: '20px',
+              padding: '16px 0'
+            }}>
+              <Card size="small" style={{ background: '#f9f9f9', border: '1px solid #e8e8e8' }}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text strong style={{ color: '#1890ff', fontSize: '13px' }}>🏷️ 基本信息</Text>
+                </div>
+                <div style={{ fontSize: '12px', lineHeight: '1.6' }}>
+                  <div style={{ marginBottom: 4 }}>
+                    <Text type="secondary">类型:</Text> <Text style={{ color: '#1890ff' }}>{getWorkloadKindLabel(kind)}</Text>
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <Text type="secondary">名称:</Text> <Text code>{workloadConfig.metadata.name}</Text>
+                  </div>
+                  <div style={{ marginBottom: 4 }}>
+                    <Text type="secondary">命名空间:</Text> <Text code>{workloadConfig.metadata.namespace}</Text>
+                  </div>
+                  {kind !== WorkloadKind.Job && kind !== WorkloadKind.Cronjob && (
+                    <div style={{ marginBottom: 4 }}>
+                      <Text type="secondary">副本数:</Text> <Text style={{ color: '#52c41a' }}>{workloadConfig.spec.replicas}</Text>
+                    </div>
+                  )}
+                  {kind === WorkloadKind.Cronjob && (
+                    <div style={{ marginBottom: 4 }}>
+                      <Text type="secondary">调度:</Text> <Text code>{workloadConfig.spec.schedule}</Text>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              <Card size="small" style={{ background: '#f9f9f9', border: '1px solid #e8e8e8' }}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text strong style={{ color: '#52c41a', fontSize: '13px' }}>🐳 容器配置</Text>
+                </div>
+                <div style={{ fontSize: '12px', lineHeight: '1.6' }}>
+                  {workloadConfig.spec.containers.map((container, index) => (
+                    <div key={index} style={{ 
+                      marginBottom: 8,
+                      padding: '6px 8px',
+                      background: '#ffffff',
+                      borderRadius: '4px',
+                      border: '1px solid #e8e8e8'
+                    }}>
+                      <div style={{ marginBottom: 2 }}>
+                        <Text style={{ fontWeight: 500, color: '#1890ff' }}>{container.name}</Text>
+                      </div>
+                      <div style={{ marginBottom: 2 }}>
+                        <Text type="secondary" style={{ fontSize: '11px' }}>镜像:</Text> 
+                        <Text code style={{ fontSize: '11px', marginLeft: 4 }}>{container.image}</Text>
+                      </div>
+                      {container.ports.length > 0 && (
+                        <div>
+                          <Text type="secondary" style={{ fontSize: '11px' }}>端口:</Text>
+                          <Text style={{ fontSize: '11px', marginLeft: 4, color: '#fa8c16' }}>
+                            {container.ports.map(p => p.containerPort).join(', ')}
+                          </Text>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+
+              <Card size="small" style={{ background: '#f9f9f9', border: '1px solid #e8e8e8' }}>
+                <div style={{ marginBottom: 8 }}>
+                  <Text strong style={{ color: '#fa8c16', fontSize: '13px' }}>⚙️ 高级配置</Text>
+                </div>
+                <div style={{ fontSize: '12px', lineHeight: '1.8' }}>
+                  {Object.keys(workloadConfig.metadata.labels || {}).length > 0 && (
+                    <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ color: '#52c41a' }}>✓</span>
+                      <Text type="secondary">标签:</Text> 
+                      <Badge count={Object.keys(workloadConfig.metadata.labels).length} size="small" />
+                    </div>
+                  )}
+                  {Object.keys(workloadConfig.metadata.annotations || {}).length > 0 && (
+                    <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ color: '#52c41a' }}>✓</span>
+                      <Text type="secondary">注解:</Text> 
+                      <Badge count={Object.keys(workloadConfig.metadata.annotations).length} size="small" />
+                    </div>
+                  )}
+                  {workloadConfig.spec.nodeSelector && Object.keys(workloadConfig.spec.nodeSelector).length > 0 && (
+                    <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ color: '#52c41a' }}>✓</span>
+                      <Text type="secondary">节点选择器:</Text> 
+                      <Badge count={Object.keys(workloadConfig.spec.nodeSelector).length} size="small" />
+                    </div>
+                  )}
+                  {workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) ? (
+                    <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ color: '#52c41a' }}>✓</span>
+                      <Text type="secondary">健康检查:</Text> 
+                      <Text style={{ color: '#52c41a' }}>已配置</Text>
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ color: '#d9d9d9' }}>○</span>
+                      <Text type="secondary">健康检查:</Text> 
+                      <Text type="secondary">未配置</Text>
+                    </div>
+                  )}
+                  {workloadConfig.spec.imageRegistry?.enabled ? (
+                    <>
+                      <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ color: '#52c41a' }}>✓</span>
+                        <Text type="secondary">镜像仓库:</Text> 
+                        <Text code style={{ fontSize: '11px' }}>{workloadConfig.spec.imageRegistry.registry || '未设置'}</Text>
+                      </div>
+                      {workloadConfig.spec.imageRegistry?.secretName && (
+                        <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ color: '#52c41a' }}>✓</span>
+                          <Text type="secondary">拉取密钥:</Text> 
+                          <Text code style={{ fontSize: '11px' }}>{workloadConfig.spec.imageRegistry.secretName}</Text>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ color: '#d9d9d9' }}>○</span>
+                      <Text type="secondary">镜像仓库:</Text> 
+                      <Text type="secondary">未启用</Text>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+          </Panel>
+        </Collapse>
+        
+        {/* 配置验证警告 */}
+        {(() => {
+          const warnings = [];
+          
+          // 检查镜像仓库配置
+          if (workloadConfig.spec.imageRegistry?.enabled && !workloadConfig.spec.imageRegistry.registry) {
+            warnings.push('镜像仓库已启用但未设置仓库地址');
+          }
+          
+          // 检查镜像是否包含仓库前缀
+          if (workloadConfig.spec.imageRegistry?.enabled && workloadConfig.spec.imageRegistry.registry) {
+            const registryMismatch = workloadConfig.spec.containers.some(c => 
+              c.image && !c.image.startsWith(workloadConfig.spec.imageRegistry!.registry!)
+            );
+            if (registryMismatch) {
+              warnings.push('部分容器镜像未使用配置的镜像仓库前缀');
+            }
+          }
+          
+          // 检查健康检查
+          const noHealthCheck = !workloadConfig.spec.containers.some(c => 
+            c.livenessProbe?.enabled || c.readinessProbe?.enabled
+          );
+          if (noHealthCheck && kind !== WorkloadKind.Job && kind !== WorkloadKind.Cronjob) {
+            warnings.push('建议为长期运行的工作负载配置健康检查');
+          }
+          
+          return warnings.length > 0 && (
+            <Alert
+              message="⚠️ 配置建议"
+              description={
+                <ul style={{ 
+                  margin: '4px 0', 
+                  paddingLeft: '20px',
+                  fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif'
+                }}>
+                  {warnings.map((warning, index) => (
+                    <li key={index} style={{ fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif' }}>
+                      {warning}
+                    </li>
+                  ))}
+                </ul>
+              }
+              type="warning"
+              showIcon
+              style={{ 
+                marginBottom: 16,
+                fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif'
+              }}
+            />
+          );
+        })()}
+
+                <Card 
+          title={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Space>
+                <span style={{ fontSize: '16px' }}>📄</span>
+                <Text strong>YAML 配置</Text>
+                <Badge count="预览" style={{ backgroundColor: '#1890ff' }} />
+              </Space>
+              <Space>
+                <Button
+                  size="small"
+                  icon={<span style={{ fontSize: '12px' }}>📋</span>}
+                  onClick={() => {
+                    navigator.clipboard.writeText(yamlContent);
+                    message.success('YAML 已复制到剪贴板');
+                  }}
+                >
+                  复制
+                </Button>
+                <Button
+                  size="small"
+                  icon={<span style={{ fontSize: '12px' }}>💾</span>}
+                  onClick={() => {
+                    const blob = new Blob([yamlContent], { type: 'text/yaml' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${workloadConfig.metadata.name}-${kind.toLowerCase()}.yaml`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    message.success('YAML 文件已下载');
+                  }}
+                >
+                  下载
+                </Button>
+              </Space>
+            </div>
+          }
+          size="small"
+          style={{ background: '#fafafa', border: '1px solid #e8e8e8' }}
+        >
+          <div style={{ 
+            background: '#1f1f1f',
+            borderRadius: '6px',
+            border: '1px solid #333',
+            overflow: 'hidden'
+          }}>
+            <TextArea
+              value={yamlContent}
+              rows={14}
+              readOnly
+              style={{ 
+                fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif',
+                fontSize: '13px',
+                lineHeight: '1.6',
+                backgroundColor: '#1f1f1f',
+                color: '#e6e6e6',
+                border: 'none',
+                padding: '16px',
+                resize: 'none'
+              }}
+            />
+          </div>
+          <div style={{ 
+            marginTop: '12px', 
+            padding: '8px 12px', 
+            background: '#f0f0f0',
+            borderRadius: '4px',
+            fontSize: '12px',
+            color: '#666',
+            fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif'
+          }}>
+            💡 提示: 此YAML将被创建为Kubernetes资源，请仔细检查配置
+          </div>
+        </Card>
       </div>
     );
   };
@@ -1677,9 +2331,24 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
       footer={
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <Text type="secondary">
-              步骤 {currentStep + 1} / {steps.length}
-            </Text>
+            <Space>
+              <Text type="secondary">
+                步骤 {currentStep + 1} / {steps.length}
+              </Text>
+              <div style={{ width: 100, height: 6, backgroundColor: '#f0f0f0', borderRadius: 3, overflow: 'hidden' }}>
+                <div 
+                  style={{ 
+                    width: `${((currentStep + 1) / steps.length) * 100}%`, 
+                    height: '100%', 
+                    backgroundColor: '#1890ff',
+                    transition: 'width 0.3s ease'
+                  }} 
+                />
+              </div>
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                {Math.round(((currentStep + 1) / steps.length) * 100)}%
+              </Text>
+            </Space>
           </div>
           <Space>
             <Button onClick={handleCancel}>
@@ -1705,6 +2374,33 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
         body: { padding: '24px 24px 0' }
       }}
     >
+      {/* 快速开始指南 */}
+      {currentStep === 0 && (
+        <Alert
+          message="🚀 欢迎使用工作负载创建向导"
+          description={
+            <div>
+              <p style={{ margin: '8px 0' }}>
+                通过4个简单步骤创建您的{getWorkloadKindLabel(kind)}工作负载：
+              </p>
+              <ol style={{ paddingLeft: '20px', margin: '8px 0' }}>
+                <li><strong>基本配置</strong> - 设置名称、命名空间和副本数</li>
+                <li><strong>容器配置</strong> - 选择镜像、配置端口和资源</li>
+                <li><strong>高级配置</strong> - 添加标签、注解和调度规则</li>
+                <li><strong>配置预览</strong> - 确认配置并创建工作负载</li>
+              </ol>
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                💡 提示：每个步骤都有详细的帮助信息和预设模板，让您快速完成配置
+              </Text>
+            </div>
+          }
+          type="info"
+          showIcon
+          closable
+          style={{ marginBottom: 16 }}
+        />
+      )}
+      
       <Steps 
         current={currentStep} 
         style={{ marginBottom: 24 }}
