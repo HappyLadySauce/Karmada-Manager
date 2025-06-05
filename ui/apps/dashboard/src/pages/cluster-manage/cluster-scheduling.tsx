@@ -112,57 +112,57 @@ const buildClusterDistributionTreeData = (clusterPlacements: PreciseClusterPlace
     ),
     key: `cluster-${clusterIndex}`,
     icon: <FolderOutlined />,
-    children: cluster.nodePlacements?.map((node, nodeIndex) => ({
-      title: (
-        <div className="flex items-center justify-between w-full">
-          <Space>
-            <DesktopOutlined style={{ color: 'var(--warning-color)' }} />
-            <span className="font-medium">{node.nodeName}</span>
-            <Tag color="green">{[...new Set(node.nodeRoles)].join(', ')}</Tag>
-            <Badge 
-              status={node.nodeStatus === 'Ready' ? 'success' : 'error'} 
-              text={node.nodeStatus}
-            />
-          </Space>
-          <Space className="mr-4">
-            <Typography.Text type="secondary">
-              IP: {node.nodeIP}
-            </Typography.Text>
-            <Typography.Text type="secondary">
-              Pods: {node.runningPods}/{node.podCount}
-            </Typography.Text>
-          </Space>
-        </div>
-      ),
-      key: `cluster-${clusterIndex}-node-${nodeIndex}`,
-      icon: <DesktopOutlined />,
-      children: node.podDetails?.map((pod, podIndex) => ({
+          children: cluster.nodePlacements?.map((node, nodeIndex) => ({
         title: (
-          <div className="flex items-center justify-between w-full">
-            <Space>
-              <ContainerOutlined style={{ color: 'var(--success-color)' }} />
-              <span>{pod.podName}</span>
-              <Tag color={pod.podStatus === 'Running' ? 'success' : 'warning'}>
-                {pod.podStatus}
-              </Tag>
+          <div className="flex items-center w-full" style={{ justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span className="font-medium">{node.nodeName}</span>
+              <Tag color="green">{[...new Set(node.nodeRoles)].join(', ')}</Tag>
+              <div style={{ marginLeft: '24px' }}>
+                <Badge 
+                  status={node.nodeStatus === 'Ready' ? 'success' : 'error'} 
+                  text={node.nodeStatus}
+                />
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '32px', marginRight: '16px' }}>
               <Typography.Text type="secondary">
-                IP: {pod.podIP}
-              </Typography.Text>
-            </Space>
-            <Space className="mr-4">
-              <Typography.Text type="secondary">
-                重启: {pod.restartCount}次
+                IP: {node.nodeIP}
               </Typography.Text>
               <Typography.Text type="secondary">
-                创建: {new Date(pod.createdTime).toLocaleString()}
+                Pods: {node.runningPods}/{node.podCount}
               </Typography.Text>
-            </Space>
+            </div>
           </div>
         ),
-        key: `cluster-${clusterIndex}-node-${nodeIndex}-pod-${podIndex}`,
-        icon: <ContainerOutlined />,
-        isLeaf: true
-      })) || []
+        key: `cluster-${clusterIndex}-node-${nodeIndex}`,
+        icon: <DesktopOutlined style={{ color: 'var(--warning-color)' }} />,
+              children: node.podDetails?.map((pod, podIndex) => ({
+          title: (
+            <div className="flex items-center justify-between w-full">
+              <Space size="middle">
+                <span>{pod.podName}</span>
+                <Tag color={pod.podStatus === 'Running' ? 'success' : 'warning'}>
+                  {pod.podStatus}
+                </Tag>
+              </Space>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '32px', marginRight: '16px' }}>
+                <Typography.Text type="secondary">
+                  IP: {pod.podIP}
+                </Typography.Text>
+                <Typography.Text type="secondary">
+                  重启: {pod.restartCount}次
+                </Typography.Text>
+                <Typography.Text type="secondary">
+                  创建: {new Date(pod.createdTime).toLocaleString()}
+                </Typography.Text>
+              </div>
+            </div>
+          ),
+          key: `cluster-${clusterIndex}-node-${nodeIndex}-pod-${podIndex}`,
+          icon: <ContainerOutlined style={{ color: 'var(--success-color)' }} />,
+          isLeaf: true
+        })) || []
     })) || []
   }));
 };
