@@ -32,7 +32,8 @@ import {
   Typography,
   Collapse,
   Button,
-  Flex
+  Flex,
+  Tree
 } from 'antd';
 import { 
   ClusterOutlined, 
@@ -45,7 +46,9 @@ import {
   DesktopOutlined,
   RocketOutlined,
   ReloadOutlined,
-  AppstoreOutlined
+  AppstoreOutlined,
+  FolderOutlined,
+  FolderOpenOutlined
 } from '@ant-design/icons';
 import '@/styles/tech-theme.css';
 import ScrollContainer from '@/components/common/ScrollContainer';
@@ -67,6 +70,7 @@ import { WorkloadKind } from '../../services/base';
 const { TabPane } = Tabs;
 const { Title } = Typography;
 const { Panel } = Collapse;
+const { TreeNode } = Tree;
 
 // 获取状态颜色
 const getStatusColor = (status: string) => {
@@ -85,6 +89,82 @@ const getStatusIcon = (status: string) => {
     case 'Failed': return <ExclamationCircleOutlined />;
     default: return null;
   }
+};
+
+// 构建集群分布树形数据
+const buildClusterDistributionTreeData = (clusterPlacements: PreciseClusterPlacement[]) => {
+  return clusterPlacements.map((cluster, clusterIndex) => ({
+    title: (
+      <div className="flex items-center justify-between w-full">
+        <Space>
+          <ClusterOutlined style={{ color: 'var(--tech-primary)' }} />
+          <span className="font-semibold">{cluster.clusterName}</span>
+          <Tag color="blue">副本: {cluster.actualReplicas}/{cluster.plannedReplicas}</Tag>
+          <Badge 
+            status={cluster.clusterStatus === 'Ready' ? 'success' : 'error'} 
+            text={cluster.clusterStatus} 
+          />
+        </Space>
+        <Typography.Text type="secondary" className="mr-4">
+          {cluster.reason}
+        </Typography.Text>
+      </div>
+    ),
+    key: `cluster-${clusterIndex}`,
+    icon: <FolderOutlined />,
+    children: cluster.nodePlacements?.map((node, nodeIndex) => ({
+      title: (
+        <div className="flex items-center justify-between w-full">
+          <Space>
+            <DesktopOutlined style={{ color: 'var(--warning-color)' }} />
+            <span className="font-medium">{node.nodeName}</span>
+            <Tag color="green">{[...new Set(node.nodeRoles)].join(', ')}</Tag>
+            <Badge 
+              status={node.nodeStatus === 'Ready' ? 'success' : 'error'} 
+              text={node.nodeStatus}
+            />
+          </Space>
+          <Space className="mr-4">
+            <Typography.Text type="secondary">
+              IP: {node.nodeIP}
+            </Typography.Text>
+            <Typography.Text type="secondary">
+              Pods: {node.runningPods}/{node.podCount}
+            </Typography.Text>
+          </Space>
+        </div>
+      ),
+      key: `cluster-${clusterIndex}-node-${nodeIndex}`,
+      icon: <DesktopOutlined />,
+      children: node.podDetails?.map((pod, podIndex) => ({
+        title: (
+          <div className="flex items-center justify-between w-full">
+            <Space>
+              <ContainerOutlined style={{ color: 'var(--success-color)' }} />
+              <span>{pod.podName}</span>
+              <Tag color={pod.podStatus === 'Running' ? 'success' : 'warning'}>
+                {pod.podStatus}
+              </Tag>
+              <Typography.Text type="secondary">
+                IP: {pod.podIP}
+              </Typography.Text>
+            </Space>
+            <Space className="mr-4">
+              <Typography.Text type="secondary">
+                重启: {pod.restartCount}次
+              </Typography.Text>
+              <Typography.Text type="secondary">
+                创建: {new Date(pod.createdTime).toLocaleString()}
+              </Typography.Text>
+            </Space>
+          </div>
+        ),
+        key: `cluster-${clusterIndex}-node-${nodeIndex}-pod-${podIndex}`,
+        icon: <ContainerOutlined />,
+        isLeaf: true
+      })) || []
+    })) || []
+  }));
 };
 
 const ClusterSchedulingPage: React.FC = () => {
@@ -400,77 +480,7 @@ const ClusterSchedulingPage: React.FC = () => {
 
 
 
-  // 渲染节点Pod详情
-  const renderNodePodDetails = (nodePlacement: NodePlacement) => (
-    <div
-      key={nodePlacement.nodeName}
-      className="tech-card"
-      style={{ marginBottom: 16 }}
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-2">
-          <DesktopOutlined style={{ color: 'var(--tech-primary)', fontSize: '16px' }} />
-          <Typography.Text strong>{nodePlacement.nodeName}</Typography.Text>
-          <Tag color="blue">{[...new Set(nodePlacement.nodeRoles)].join(', ')}</Tag>
-          <Badge 
-            status={nodePlacement.nodeStatus === 'Ready' ? 'success' : 'error'} 
-            text={nodePlacement.nodeStatus}
-          />
-        </div>
-        <Space>
-          <Typography.Text type="secondary">IP: {nodePlacement.nodeIP}</Typography.Text>
-          <Typography.Text type="secondary">Pods: {nodePlacement.runningPods}/{nodePlacement.podCount}</Typography.Text>
-        </Space>
-      </div>
-      <Row gutter={16}>
-        <Col xs={24} md={12}>
-          <Descriptions size="small" column={1}>
-            <Descriptions.Item label="运行中Pod">{nodePlacement.runningPods}</Descriptions.Item>
-            <Descriptions.Item label="待调度Pod">{nodePlacement.pendingPods}</Descriptions.Item>
-            <Descriptions.Item label="失败Pod">{nodePlacement.failedPods}</Descriptions.Item>
-          </Descriptions>
-        </Col>
-        <Col xs={24} md={12}>
-          <Descriptions size="small" column={1}>
-            <Descriptions.Item label="CPU容量">{nodePlacement.nodeResources.cpuCapacity}</Descriptions.Item>
-            <Descriptions.Item label="内存容量">{nodePlacement.nodeResources.memoryCapacity}</Descriptions.Item>
-            <Descriptions.Item label="Pod容量">{nodePlacement.nodeResources.podCapacity}</Descriptions.Item>
-          </Descriptions>
-        </Col>
-      </Row>
-      
-      {nodePlacement.podDetails && nodePlacement.podDetails.length > 0 && (
-        <div style={{ marginTop: 16 }}>
-          <Title level={5}>Pod详情</Title>
-          <List
-            size="small"
-            dataSource={nodePlacement.podDetails}
-            renderItem={(pod: PodDetail) => (
-              <List.Item>
-                <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                  <Space>
-                    <ContainerOutlined />
-                    <div>
-                      <Typography.Text strong>{pod.podName}</Typography.Text>
-                      <br />
-                      <Typography.Text type="secondary">
-                        状态: <Tag color={pod.podStatus === 'Running' ? 'success' : 'warning'}>{pod.podStatus}</Tag>
-                        IP: {pod.podIP}
-                      </Typography.Text>
-                    </div>
-                  </Space>
-                  <Space direction="vertical" size="small">
-                    <Typography.Text type="secondary">重启: {pod.restartCount}次</Typography.Text>
-                    <Typography.Text type="secondary">创建: {new Date(pod.createdTime).toLocaleString()}</Typography.Text>
-                  </Space>
-                </Space>
-              </List.Item>
-            )}
-          />
-        </div>
-      )}
-    </div>
-  );
+
 
   // 渲染详情视图
   const renderDetail = () => {
@@ -488,103 +498,203 @@ const ClusterSchedulingPage: React.FC = () => {
 
     return (
       <div>
-        {/* 工作负载基本信息 */}
-        <div className="tech-card" style={{ marginBottom: 24 }}>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <RocketOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
-              <Title level={4} style={{ margin: 0, color: 'var(--text-color)' }}>
-                工作负载详情: {selectedWorkload.workloadInfo.name}
-              </Title>
-            </div>
-          </div>
-          <Row gutter={16}>
-            <Col xs={24} md={12}>
-              <Descriptions column={1}>
-                <Descriptions.Item label="名称">{selectedWorkload.workloadInfo.name}</Descriptions.Item>
-                <Descriptions.Item label="命名空间">{selectedWorkload.workloadInfo.namespace}</Descriptions.Item>
-                <Descriptions.Item label="类型">{selectedWorkload.workloadInfo.kind}</Descriptions.Item>
-                <Descriptions.Item label="API版本">{selectedWorkload.workloadInfo.apiVersion}</Descriptions.Item>
-              </Descriptions>
-            </Col>
-            <Col xs={24} md={12}>
-              <Descriptions column={1}>
-                <Descriptions.Item label="总副本数">{selectedWorkload.totalReplicas}</Descriptions.Item>
-                <Descriptions.Item label="就绪副本数">{selectedWorkload.readyReplicas}</Descriptions.Item>
-                <Descriptions.Item label="调度状态">
-                  <Tag color={getStatusColor(selectedWorkload.schedulingStatus.phase)}>
-                    {selectedWorkload.schedulingStatus.phase}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="状态消息">{selectedWorkload.schedulingStatus.message}</Descriptions.Item>
-              </Descriptions>
-            </Col>
-          </Row>
-        </div>
-
-        {/* 传播策略信息 */}
-        {selectedWorkload.propagationPolicy && (
-          <div className="tech-card" style={{ marginBottom: 24 }}>
-            <div className="flex items-center justify-between mb-4">
-              <Title level={4} style={{ margin: 0, color: 'var(--text-color)' }}>
-                传播策略
-              </Title>
-              <DesktopOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
-            </div>
-            <Descriptions column={2}>
-              <Descriptions.Item label="策略名称">{selectedWorkload.propagationPolicy.name}</Descriptions.Item>
-              <Descriptions.Item label="调度类型">
-                {selectedWorkload.propagationPolicy.placement?.replicaScheduling?.replicaSchedulingType || 'N/A'}
-              </Descriptions.Item>
-              <Descriptions.Item label="目标集群" span={2}>
-                <Space wrap>
-                  {selectedWorkload.propagationPolicy.clusterAffinity?.clusterNames?.map((cluster: string) => (
-                    <Tag key={cluster} color="green">{cluster}</Tag>
-                  ))}
-                </Space>
-              </Descriptions.Item>
-            </Descriptions>
-          </div>
-        )}
-
-        {/* 集群分布详情 */}
-        <div className="tech-card" style={{ marginBottom: 24 }}>
-          <div className="flex items-center justify-between mb-4">
-            <Title level={4} style={{ margin: 0, color: 'var(--text-color)' }}>
-              集群分布详情
-            </Title>
-            <ClusterOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
-          </div>
-          <Collapse>
-            {selectedWorkload.clusterPlacements.map((cluster: PreciseClusterPlacement) => (
-              <Panel
-                key={cluster.clusterName}
-                header={
-                  <Space>
-                    <ClusterOutlined />
-                    <span>集群: {cluster.clusterName}</span>
-                    <Tag color="blue">副本: {cluster.actualReplicas}/{cluster.plannedReplicas}</Tag>
-                    <Badge status={cluster.clusterStatus === 'Ready' ? 'success' : 'error'} text={cluster.clusterStatus} />
-                  </Space>
-                }
-              >
-                <div style={{ marginBottom: 16 }}>
-                  <Typography.Text type="secondary">调度原因: {cluster.reason}</Typography.Text>
+        {/* 使用左右分布布局 */}
+        <Row gutter={[24, 24]}>
+          {/* 左侧：集群分布详情 - 占更大空间 */}
+          <Col xs={24} lg={16}>
+            <div className="tech-card" style={{ height: 'auto', minHeight: '600px' }}>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <Title level={4} style={{ margin: 0, color: 'var(--text-color)' }}>
+                    🏗️ 集群分布详情
+                  </Title>
+                  <Typography.Text type="secondary" style={{ marginTop: 4, display: 'block' }}>
+                    树形展示：集群 → 节点 → Pod，直观查看多层级分布
+                  </Typography.Text>
+                  {selectedWorkload.clusterPlacements && (
+                    <div style={{ marginTop: 8 }}>
+                      <Space>
+                        <Tag color="blue">
+                          {selectedWorkload.clusterPlacements.length} 个集群
+                        </Tag>
+                        <Tag color="green">
+                          {selectedWorkload.clusterPlacements.reduce((sum, cluster) => 
+                            sum + (cluster.nodePlacements?.length || 0), 0
+                          )} 个节点
+                        </Tag>
+                        <Tag color="orange">
+                          {selectedWorkload.clusterPlacements.reduce((sum, cluster) => 
+                            sum + (cluster.nodePlacements?.reduce((nodeSum, node) => 
+                              nodeSum + (node.podDetails?.length || 0), 0) || 0), 0
+                          )} 个Pod
+                        </Tag>
+                      </Space>
+                    </div>
+                  )}
                 </div>
-                
-                {/* 节点分布 */}
-                {cluster.nodePlacements && cluster.nodePlacements.length > 0 ? (
-                  <div>
-                    <Title level={5}>节点分布 ({cluster.nodePlacements.length} 个节点)</Title>
-                    {cluster.nodePlacements.map(renderNodePodDetails)}
+                <ClusterOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
+              </div>
+              
+              {selectedWorkload.clusterPlacements && selectedWorkload.clusterPlacements.length > 0 ? (
+                <div 
+                  className="tech-tree-container" 
+                  style={{ 
+                    padding: '20px', 
+                    backgroundColor: 'rgba(0, 255, 255, 0.02)', 
+                    borderRadius: '12px', 
+                    border: '1px solid rgba(0, 255, 255, 0.1)',
+                    position: 'relative'
+                  }}
+                >
+                  <Tree
+                    showIcon
+                    showLine={{ showLeafIcon: false }}
+                    defaultExpandAll
+                    treeData={buildClusterDistributionTreeData(selectedWorkload.clusterPlacements)}
+                    className="custom-tree-lines"
+                    style={{
+                      background: 'transparent',
+                      fontSize: '14px',
+                      color: 'var(--text-color)',
+                    }}
+                    switcherIcon={({ expanded, isLeaf }) => {
+                      if (isLeaf) return null;
+                      return expanded ? (
+                        <FolderOpenOutlined style={{ color: 'var(--tech-primary)' }} />
+                      ) : (
+                        <FolderOutlined style={{ color: 'var(--tech-primary)' }} />
+                      );
+                    }}
+                  />
+                  
+                  {/* 自定义树形连接线样式 */}
+                  <style>{`
+                    .custom-tree-lines .ant-tree-switcher {
+                      background: transparent !important;
+                    }
+                    
+                    .custom-tree-lines .ant-tree-line::before {
+                      border-left: 1px dashed var(--tech-primary) !important;
+                    }
+                    
+                    .custom-tree-lines .ant-tree-line::after {
+                      border-bottom: 1px dashed var(--tech-primary) !important;
+                    }
+                    
+                    .custom-tree-lines .ant-tree-treenode {
+                      padding: 4px 0;
+                    }
+                    
+                    .custom-tree-lines .ant-tree-node-content-wrapper {
+                      border-radius: 6px;
+                      transition: all 0.3s ease;
+                      padding: 4px 8px;
+                      width: 100%;
+                    }
+                    
+                    .custom-tree-lines .ant-tree-node-content-wrapper:hover {
+                      background-color: rgba(0, 255, 255, 0.1) !important;
+                      box-shadow: 0 2px 8px rgba(0, 255, 255, 0.2);
+                    }
+                    
+                    .custom-tree-lines .ant-tree-treenode-selected .ant-tree-node-content-wrapper {
+                      background-color: rgba(0, 255, 255, 0.15) !important;
+                    }
+                  `}</style>
+                </div>
+              ) : (
+                <Alert 
+                  message="暂无集群分布信息" 
+                  description="工作负载尚未调度到任何集群或调度信息未加载完成"
+                  type="info" 
+                  style={{ margin: '16px 0' }}
+                />
+              )}
+            </div>
+          </Col>
+
+          {/* 右侧：工作负载详情和传播策略 */}
+          <Col xs={24} lg={8}>
+            <Space direction="vertical" size="large" style={{ width: '100%' }}>
+              {/* 工作负载基本信息 */}
+              <div className="tech-card">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <RocketOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
+                    <Title level={5} style={{ margin: 0, color: 'var(--text-color)' }}>
+                      工作负载详情
+                    </Title>
                   </div>
-                ) : (
-                  <Alert message="暂无节点分布信息" type="info" />
-                )}
-              </Panel>
-            ))}
-          </Collapse>
-        </div>
+                </div>
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="名称">
+                    <Typography.Text strong>{selectedWorkload.workloadInfo.name}</Typography.Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="命名空间">
+                    <Tag color="blue">{selectedWorkload.workloadInfo.namespace}</Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="类型">
+                    <Tag color="purple">{selectedWorkload.workloadInfo.kind}</Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="API版本">
+                    <Typography.Text type="secondary">{selectedWorkload.workloadInfo.apiVersion}</Typography.Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="总副本数">
+                    <Typography.Text strong style={{ color: 'var(--tech-primary)' }}>
+                      {selectedWorkload.totalReplicas}
+                    </Typography.Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="就绪副本数">
+                    <Typography.Text strong style={{ color: 'var(--success-color)' }}>
+                      {selectedWorkload.readyReplicas}
+                    </Typography.Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="调度状态">
+                    <Tag color={getStatusColor(selectedWorkload.schedulingStatus.phase)}>
+                      {selectedWorkload.schedulingStatus.phase}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="状态消息">
+                    <Typography.Text type="secondary" style={{ fontSize: '12px' }}>
+                      {selectedWorkload.schedulingStatus.message}
+                    </Typography.Text>
+                  </Descriptions.Item>
+                </Descriptions>
+              </div>
+
+              {/* 传播策略信息 */}
+              {selectedWorkload.propagationPolicy && (
+                <div className="tech-card">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <DesktopOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
+                      <Title level={5} style={{ margin: 0, color: 'var(--text-color)' }}>
+                        传播策略
+                      </Title>
+                    </div>
+                  </div>
+                  <Descriptions column={1} size="small">
+                    <Descriptions.Item label="策略名称">
+                      <Typography.Text strong>{selectedWorkload.propagationPolicy.name}</Typography.Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="调度类型">
+                      <Tag color="orange">
+                        {selectedWorkload.propagationPolicy.placement?.replicaScheduling?.replicaSchedulingType || 'N/A'}
+                      </Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="目标集群">
+                      <Space wrap size="small">
+                        {selectedWorkload.propagationPolicy.clusterAffinity?.clusterNames?.map((cluster: string) => (
+                          <Tag key={cluster} color="green">{cluster}</Tag>
+                        ))}
+                      </Space>
+                    </Descriptions.Item>
+                  </Descriptions>
+                </div>
+              )}
+            </Space>
+          </Col>
+        </Row>
       </div>
     );
   };
