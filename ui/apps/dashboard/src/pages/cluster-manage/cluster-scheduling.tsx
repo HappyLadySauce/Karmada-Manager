@@ -366,15 +366,15 @@ const ClusterSchedulingPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 集群拓扑视图 - 工作负载列表 */}
+      {/* 集群调度列表 - 工作负载列表 */}
       <div className="tech-card">
         <div className="flex items-center justify-between mb-4">
           <div>
             <Title level={4} style={{ margin: 0, color: 'var(--text-color)' }}>
-              集群拓扑视图
+              集群调度列表
             </Title>
             <Typography.Text type="secondary">
-              显示工作负载在多集群中的分布情况，包括副本状态和调度详情
+              显示工作负载在多集群中的调度情况，包括副本状态和调度详情
             </Typography.Text>
           </div>
           <NodeIndexOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
