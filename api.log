@@ -1,0 +1,444 @@
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /livez                    --> github.com/karmada-io/dashboard/cmd/api/app/router.init.0.func1 (3 handlers)
+[GIN-debug] GET    /readyz                   --> github.com/karmada-io/dashboard/cmd/api/app/router.init.0.func2 (3 handlers)
+[GIN-debug] POST   /api/v1/login             --> github.com/karmada-io/dashboard/cmd/api/app/routes/auth.handleLogin (3 handlers)
+[GIN-debug] GET    /api/v1/me                --> github.com/karmada-io/dashboard/cmd/api/app/routes/auth.handleMe (3 handlers)
+[GIN-debug] GET    /api/v1/config            --> github.com/karmada-io/dashboard/cmd/api/app/routes/config.GetDashboardConfig (3 handlers)
+[GIN-debug] POST   /api/v1/config            --> github.com/karmada-io/dashboard/cmd/api/app/routes/config.SetDashboardConfig (3 handlers)
+[GIN-debug] GET    /api/v1/configmap         --> github.com/karmada-io/dashboard/cmd/api/app/routes/configmap.handleGetConfigMap (3 handlers)
+[GIN-debug] GET    /api/v1/configmap/:namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/configmap.handleGetConfigMap (3 handlers)
+[GIN-debug] GET    /api/v1/configmap/:namespace/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/configmap.handleGetConfigMapDetail (3 handlers)
+[GIN-debug] GET    /api/v1/cronjob           --> github.com/karmada-io/dashboard/cmd/api/app/routes/cronjob.handleGetCronJob (3 handlers)
+[GIN-debug] GET    /api/v1/cronjob/:namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/cronjob.handleGetCronJob (3 handlers)
+[GIN-debug] GET    /api/v1/cronjob/:namespace/:statefulset --> github.com/karmada-io/dashboard/cmd/api/app/routes/cronjob.handleGetCronJobDetail (3 handlers)
+[GIN-debug] GET    /api/v1/cronjob/:namespace/:statefulset/event --> github.com/karmada-io/dashboard/cmd/api/app/routes/cronjob.handleGetCronJobEvents (3 handlers)
+[GIN-debug] GET    /api/v1/daemonset         --> github.com/karmada-io/dashboard/cmd/api/app/routes/daemonset.handleGetDaemonset (3 handlers)
+[GIN-debug] GET    /api/v1/daemonset/:namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/daemonset.handleGetDaemonset (3 handlers)
+[GIN-debug] GET    /api/v1/daemonset/:namespace/:statefulset --> github.com/karmada-io/dashboard/cmd/api/app/routes/daemonset.handleGetDaemonsetDetail (3 handlers)
+[GIN-debug] GET    /api/v1/daemonset/:namespace/:statefulset/event --> github.com/karmada-io/dashboard/cmd/api/app/routes/daemonset.handleGetDaemonsetEvents (3 handlers)
+[GIN-debug] GET    /api/v1/deployment        --> github.com/karmada-io/dashboard/cmd/api/app/routes/deployment.handleGetDeployments (3 handlers)
+[GIN-debug] GET    /api/v1/deployment/:namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/deployment.handleGetDeployments (3 handlers)
+[GIN-debug] GET    /api/v1/deployment/:namespace/:deployment --> github.com/karmada-io/dashboard/cmd/api/app/routes/deployment.handleGetDeploymentDetail (3 handlers)
+[GIN-debug] GET    /api/v1/deployment/:namespace/:deployment/event --> github.com/karmada-io/dashboard/cmd/api/app/routes/deployment.handleGetDeploymentEvents (3 handlers)
+[GIN-debug] POST   /api/v1/deployment        --> github.com/karmada-io/dashboard/cmd/api/app/routes/deployment.handlerCreateDeployment (3 handlers)
+[GIN-debug] GET    /api/v1/ingress           --> github.com/karmada-io/dashboard/cmd/api/app/routes/ingress.handleGetIngress (3 handlers)
+[GIN-debug] GET    /api/v1/ingress/:namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/ingress.handleGetIngress (3 handlers)
+[GIN-debug] GET    /api/v1/ingress/:namespace/:service --> github.com/karmada-io/dashboard/cmd/api/app/routes/ingress.handleGetIngressDetail (3 handlers)
+[GIN-debug] GET    /api/v1/job               --> github.com/karmada-io/dashboard/cmd/api/app/routes/job.handleGetJob (3 handlers)
+[GIN-debug] GET    /api/v1/job/:namespace    --> github.com/karmada-io/dashboard/cmd/api/app/routes/job.handleGetJob (3 handlers)
+[GIN-debug] GET    /api/v1/job/:namespace/:statefulset --> github.com/karmada-io/dashboard/cmd/api/app/routes/job.handleGetJobDetail (3 handlers)
+[GIN-debug] GET    /api/v1/job/:namespace/:statefulset/event --> github.com/karmada-io/dashboard/cmd/api/app/routes/job.handleGetJobEvents (3 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/deployment --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/deployment.handleGetMemberDeployments (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/deployment/:namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/deployment.handleGetMemberDeployments (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/deployment/:namespace/:deployment --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/deployment.handleGetMemberDeploymentDetail (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/deployment/:namespace/:deployment/event --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/deployment.handleGetMemberDeploymentEvents (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/namespace.handleGetMemberNamespace (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/namespace/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/namespace.handleGetMemberNamespaceDetail (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/namespace/:name/event --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/namespace.handleGetMemberNamespaceEvents (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/nodes --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/node.handleGetMemberNodes (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/nodes/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/node.handleGetMemberNodeDetail (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/nodes/:name/pods --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/node.handleGetMemberNodePods (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/pod --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/pod.handleGetMemberPod (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/pods --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/pod.handleGetMemberPod (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/pod/:namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/pod.handleGetMemberPod (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/pod/:namespace/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/pod.handleGetMemberPodDetail (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/service --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/service.handleGetMemberService (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/services --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/service.handleGetMemberService (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/service/:namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/service.handleGetMemberService (4 handlers)
+[GIN-debug] GET    /api/v1/member/:clustername/service/:namespace/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/member/service.handleGetMemberServiceDetail (4 handlers)
+[GIN-debug] POST   /api/v1/namespace         --> github.com/karmada-io/dashboard/cmd/api/app/routes/namespace.handleCreateNamespace (3 handlers)
+[GIN-debug] GET    /api/v1/namespace         --> github.com/karmada-io/dashboard/cmd/api/app/routes/namespace.handleGetNamespaces (3 handlers)
+[GIN-debug] GET    /api/v1/namespace/:name   --> github.com/karmada-io/dashboard/cmd/api/app/routes/namespace.handleGetNamespaceDetail (3 handlers)
+[GIN-debug] GET    /api/v1/namespace/:name/event --> github.com/karmada-io/dashboard/cmd/api/app/routes/namespace.handleGetNamespaceEvents (3 handlers)
+[GIN-debug] GET    /api/v1/secret            --> github.com/karmada-io/dashboard/cmd/api/app/routes/secret.handleGetSecrets (3 handlers)
+[GIN-debug] GET    /api/v1/secret/:namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/secret.handleGetSecrets (3 handlers)
+[GIN-debug] GET    /api/v1/secret/:namespace/:service --> github.com/karmada-io/dashboard/cmd/api/app/routes/secret.handleGetSecretDetail (3 handlers)
+[GIN-debug] GET    /api/v1/service           --> github.com/karmada-io/dashboard/cmd/api/app/routes/service.handleGetServices (3 handlers)
+[GIN-debug] GET    /api/v1/service/:namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/service.handleGetServices (3 handlers)
+[GIN-debug] GET    /api/v1/service/:namespace/:service --> github.com/karmada-io/dashboard/cmd/api/app/routes/service.handleGetServiceDetail (3 handlers)
+[GIN-debug] GET    /api/v1/service/:namespace/:service/event --> github.com/karmada-io/dashboard/cmd/api/app/routes/service.handleGetServiceEvents (3 handlers)
+[GIN-debug] GET    /api/v1/statefulset       --> github.com/karmada-io/dashboard/cmd/api/app/routes/statefulset.handleGetStatefulsets (3 handlers)
+[GIN-debug] GET    /api/v1/statefulset/:namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/statefulset.handleGetStatefulsets (3 handlers)
+[GIN-debug] GET    /api/v1/statefulset/:namespace/:statefulset --> github.com/karmada-io/dashboard/cmd/api/app/routes/statefulset.handleGetStatefulsetDetail (3 handlers)
+[GIN-debug] GET    /api/v1/statefulset/:namespace/:statefulset/event --> github.com/karmada-io/dashboard/cmd/api/app/routes/statefulset.handleGetStatefulsetEvents (3 handlers)
+[GIN-debug] DELETE /api/v1/_raw/:kind/namespace/:namespace/name/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured.handleDeleteResource (3 handlers)
+[GIN-debug] GET    /api/v1/_raw/:kind/namespace/:namespace/name/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured.handleGetResource (3 handlers)
+[GIN-debug] PUT    /api/v1/_raw/:kind/namespace/:namespace/name/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured.handlePutResource (3 handlers)
+[GIN-debug] POST   /api/v1/_raw/:kind/namespace/:namespace/name/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured.handleCreateResource (3 handlers)
+[GIN-debug] DELETE /api/v1/_raw/:kind/name/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured.handleDeleteResource (3 handlers)
+[GIN-debug] GET    /api/v1/_raw/:kind/name/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured.handleGetResource (3 handlers)
+[GIN-debug] PUT    /api/v1/_raw/:kind/name/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured.handlePutResource (3 handlers)
+[GIN-debug] POST   /api/v1/_raw/:kind/name/:name --> github.com/karmada-io/dashboard/cmd/api/app/routes/unstructured.handleCreateResource (3 handlers)
+[GIN-debug] GET    /api/v1/overview          --> github.com/karmada-io/dashboard/cmd/api/app/routes/overview.handleGetOverview (3 handlers)
+[GIN-debug] GET    /api/v1/clusteroverridepolicy --> github.com/karmada-io/dashboard/cmd/api/app/routes/clusteroverridepolicy.handleGetClusterOverridePolicyList (3 handlers)
+[GIN-debug] GET    /api/v1/clusteroverridepolicies --> github.com/karmada-io/dashboard/cmd/api/app/routes/clusteroverridepolicy.handleGetClusterOverridePolicyList (3 handlers)
+[GIN-debug] GET    /api/v1/clusteroverridepolicy/:clusterOverridePolicyName --> github.com/karmada-io/dashboard/cmd/api/app/routes/clusteroverridepolicy.handleGetClusterOverridePolicyDetail (3 handlers)
+[GIN-debug] POST   /api/v1/clusteroverridepolicy --> github.com/karmada-io/dashboard/cmd/api/app/routes/clusteroverridepolicy.handlePostClusterOverridePolicy (3 handlers)
+[GIN-debug] GET    /api/v1/clusterpropagationpolicy --> github.com/karmada-io/dashboard/cmd/api/app/routes/clusterpropagationpolicy.handleGetClusterPropagationPolicyList (3 handlers)
+[GIN-debug] GET    /api/v1/clusterpropagationpolicies --> github.com/karmada-io/dashboard/cmd/api/app/routes/clusterpropagationpolicy.handleGetClusterPropagationPolicyList (3 handlers)
+[GIN-debug] GET    /api/v1/clusterpropagationpolicy/:clusterPropagationPolicyName --> github.com/karmada-io/dashboard/cmd/api/app/routes/clusterpropagationpolicy.handleGetClusterPropagationPolicyDetail (3 handlers)
+[GIN-debug] POST   /api/v1/clusterpropagationpolicy --> github.com/karmada-io/dashboard/cmd/api/app/routes/clusterpropagationpolicy.handlePostClusterPropagationPolicy (3 handlers)
+[GIN-debug] GET    /api/v1/overridepolicy    --> github.com/karmada-io/dashboard/cmd/api/app/routes/overridepolicy.handleGetOverridePolicyList (3 handlers)
+[GIN-debug] GET    /api/v1/overridepolicies  --> github.com/karmada-io/dashboard/cmd/api/app/routes/overridepolicy.handleGetOverridePolicyList (3 handlers)
+[GIN-debug] GET    /api/v1/overridepolicy/:namespace --> github.com/karmada-io/dashboard/cmd/api/app/routes/overridepolicy.handleGetOverridePolicyList (3 handlers)
+[GIN-debug] GET    /api/v1/overridepolicy/namespace/:namespace/:overridePolicyName --> github.com/karmada-io/dashboard/cmd/api/app/routes/overridepolicy.handleGetOverridePolicyDetail (3 handlers)
+[GIN-debug] POST   /api/v1/overridepolicy    --> github.com/karmada-io/dashboard/cmd/api/app/routes/overridepolicy.handlePostOverridePolicy (3 handlers)
+[GIN-debug] PUT    /api/v1/overridepolicy    --> github.com/karmada-io/dashboard/cmd/api/app/routes/overridepolicy.handlePutOverridePolicy (3 handlers)
+[GIN-debug] DELETE /api/v1/overridepolicy    --> github.com/karmada-io/dashboard/cmd/api/app/routes/overridepolicy.handleDeleteOverridePolicy (3 handlers)
+[GIN-debug] GET    /api/v1/propagationpolicy --> github.com/karmada-io/dashboard/cmd/api/app/routes/propagationpolicy.handleGetPropagationPolicyList (3 handlers)
+[GIN-debug] GET    /api/v1/propagationpolicies --> github.com/karmada-io/dashboard/cmd/api/app/routes/propagationpolicy.handleGetPropagationPolicyList (3 handlers)
+[GIN-debug] GET    /api/v1/propagationpolicy/namespace/:namespace/:propagationPolicyName --> github.com/karmada-io/dashboard/cmd/api/app/routes/propagationpolicy.handleGetPropagationPolicyDetail (3 handlers)
+[GIN-debug] POST   /api/v1/propagationpolicy --> github.com/karmada-io/dashboard/cmd/api/app/routes/propagationpolicy.handlePostPropagationPolicy (3 handlers)
+[GIN-debug] PUT    /api/v1/propagationpolicy --> github.com/karmada-io/dashboard/cmd/api/app/routes/propagationpolicy.handlePutPropagationPolicy (3 handlers)
+[GIN-debug] DELETE /api/v1/propagationpolicy --> github.com/karmada-io/dashboard/cmd/api/app/routes/propagationpolicy.handleDeletePropagationPolicy (3 handlers)
+[GIN-debug] GET    /api/v1/workloads/:namespace/:name/scheduling --> github.com/karmada-io/dashboard/cmd/api/app/routes/scheduling.handleGetWorkloadScheduling (3 handlers)
+[GIN-debug] GET    /api/v1/workloads/:namespace/:name/precise-scheduling --> github.com/karmada-io/dashboard/cmd/api/app/routes/scheduling.handleGetPreciseSchedulingInfo (3 handlers)
+[GIN-debug] GET    /api/v1/scheduling/overview --> github.com/karmada-io/dashboard/cmd/api/app/routes/scheduling.handleGetSchedulingOverview (3 handlers)
+[GIN-debug] GET    /api/v1/scheduling/namespace/:namespace/workloads --> github.com/karmada-io/dashboard/cmd/api/app/routes/scheduling.handleGetNamespaceWorkloadsScheduling (3 handlers)
+[GIN-debug] GET    /api/v1/cluster           --> github.com/karmada-io/dashboard/cmd/api/app/routes/cluster.handleGetClusterList (3 handlers)
+[GIN-debug] GET    /api/v1/cluster/:name     --> github.com/karmada-io/dashboard/cmd/api/app/routes/cluster.handleGetClusterDetail (3 handlers)
+[GIN-debug] GET    /api/v1/clusters          --> github.com/karmada-io/dashboard/cmd/api/app/routes/cluster.handleGetClusterList (3 handlers)
+[GIN-debug] GET    /api/v1/clusters/:name    --> github.com/karmada-io/dashboard/cmd/api/app/routes/cluster.handleGetClusterDetail (3 handlers)
+[GIN-debug] POST   /api/v1/cluster           --> github.com/karmada-io/dashboard/cmd/api/app/routes/cluster.handlePostCluster (3 handlers)
+[GIN-debug] PUT    /api/v1/cluster/:name     --> github.com/karmada-io/dashboard/cmd/api/app/routes/cluster.handlePutCluster (3 handlers)
+[GIN-debug] DELETE /api/v1/cluster/:name     --> github.com/karmada-io/dashboard/cmd/api/app/routes/cluster.handleDeleteCluster (3 handlers)
+I0605 00:18:47.799553  233998 api.go:99] "Starting Karmada Dashboard API" version="0.0.0-dev"
+I0605 00:18:47.799637  233998 init.go:99] "Using kubeconfig" kubeconfig="/root/.kube/karmada.config"
+I0605 00:18:47.800652  233998 client.go:42] Use context karmada-apiserver
+I0605 00:18:47.800831  233998 init.go:119] "Using kubeconfig" kubeconfig="/root/.kube/karmada.config"
+I0605 00:18:47.801471  233998 init.go:99] "Using kubeconfig" kubeconfig="/root/.kube/karmada.config"
+I0605 00:18:47.802179  233998 client.go:42] Use context karmada-apiserver
+I0605 00:18:47.802360  233998 init.go:149] InClusterConfig error: unable to load in-cluster configuration, KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT must be defined
+I0605 00:18:47.802391  233998 init.go:150] InitKubeConfig by explicit kubeconfig path
+I0605 00:18:47.802402  233998 init.go:99] "Using kubeconfig" kubeconfig="/root/.kube/config"
+I0605 00:18:47.802787  233998 client.go:42] Use context default
+I0605 00:18:47.802964  233998 init.go:119] "Using kubeconfig" kubeconfig="/root/.kube/config"
+I0605 00:18:47.810323  233998 api.go:129] "Successful initial request to the Kubernetes apiserver" version="v1.30.11+rke2r1"
+I0605 00:18:47.831500  233998 api.go:137] "Successful initial request to the Karmada apiserver" version="v1.31.3"
+I0605 00:18:47.831716  233998 config.go:100] ConfigMap informer started, waiting for ConfigMap events...
+[GIN-debug] Listening and serving HTTP on 127.0.0.1:8000
+I0605 00:19:05.138239  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="test" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:19:05.148214  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="test" totalWorkloads=1 returnedWorkloads=1
+[GIN] 2025/06/05 - 00:19:05 | 200 |   10.339643ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/test/workloads?kind=deployment&page=1&pageSize=50"
+I0605 00:19:15.303811  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter="test"
+I0605 00:19:15.319027  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=1 scheduledWorkloads=0 pendingWorkloads=1 namespaces=1
+[GIN] 2025/06/05 - 00:19:15 | 200 |    15.52297ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview?namespace=test"
+I0605 00:20:08.128969  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+I0605 00:20:08.147931  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=18 scheduledWorkloads=13 pendingWorkloads=5 namespaces=4
+[GIN] 2025/06/05 - 00:20:08 | 200 |   19.093018ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+[GIN] 2025/06/05 - 00:20:51 | 200 |     175.615µs |       127.0.0.1 | GET      "/api/v1/config"
+I0605 00:20:51.076890  233998 log.go:245] Getting list of namespaces
+[GIN] 2025/06/05 - 00:20:51 | 200 |   22.719484ms |       127.0.0.1 | GET      "/api/v1/namespace"
+I0605 00:20:51.419592  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:20:51 | 200 |   10.235524ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:20:51.444985  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=18 scheduledWorkloads=13 pendingWorkloads=5 namespaces=4
+[GIN] 2025/06/05 - 00:20:51 | 200 |   25.511796ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+I0605 00:22:55.372446  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+I0605 00:22:55.396402  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=20 scheduledWorkloads=13 pendingWorkloads=7 namespaces=4
+[GIN] 2025/06/05 - 00:22:55 | 200 |   24.100836ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+I0605 00:23:04.593200  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="test" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:23:04.596904  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="test" totalWorkloads=2 returnedWorkloads=2
+[GIN] 2025/06/05 - 00:23:04 | 200 |    3.894482ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/test/workloads?kind=deployment&page=1&pageSize=50"
+I0605 00:23:46.093243  233998 log.go:245] Getting list of namespaces
+[GIN] 2025/06/05 - 00:23:46 | 200 |     128.094µs |       127.0.0.1 | GET      "/api/v1/config"
+I0605 00:23:46.100578  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+[GIN] 2025/06/05 - 00:23:46 | 200 |   17.419318ms |       127.0.0.1 | GET      "/api/v1/me"
+[GIN] 2025/06/05 - 00:23:46 | 200 |   30.963478ms |       127.0.0.1 | GET      "/api/v1/namespace"
+I0605 00:23:46.126899  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:23:46 | 200 |   26.442345ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:23:46 | 200 |   23.261349ms |       127.0.0.1 | GET      "/api/v1/cluster"
+[GIN] 2025/06/05 - 00:23:50 | 200 |     3.36113ms |       127.0.0.1 | GET      "/api/v1/me"
+[GIN] 2025/06/05 - 00:23:50 | 200 |       90.17µs |       127.0.0.1 | GET      "/api/v1/config"
+I0605 00:23:50.948877  233998 log.go:245] Getting list of namespaces
+I0605 00:23:50.951665  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+[GIN] 2025/06/05 - 00:23:50 | 200 |    6.340079ms |       127.0.0.1 | GET      "/api/v1/namespace"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:23:50 | 200 |     9.56581ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:23:50.974110  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:23:50 | 200 |   22.538972ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+I0605 00:23:55.876752  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="kube-system" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:23:55.877120  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter="kube-system"
+I0605 00:23:55.882559  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="kube-system" totalWorkloads=4 returnedWorkloads=4
+[GIN] 2025/06/05 - 00:23:55 | 200 |    5.977947ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/kube-system/workloads?kind=deployment&page=1&pageSize=50"
+I0605 00:23:55.897033  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=6 scheduledWorkloads=6 pendingWorkloads=0 namespaces=1
+[GIN] 2025/06/05 - 00:23:55 | 200 |   20.159096ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview?namespace=kube-system"
+I0605 00:23:57.667219  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="test" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:23:57.667758  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter="test"
+I0605 00:23:57.670232  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="test" totalWorkloads=0 returnedWorkloads=0
+[GIN] 2025/06/05 - 00:23:57 | 200 |    3.149441ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/test/workloads?kind=deployment&page=1&pageSize=50"
+I0605 00:23:57.679321  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=0 scheduledWorkloads=0 pendingWorkloads=0 namespaces=0
+[GIN] 2025/06/05 - 00:23:57 | 200 |   11.675542ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview?namespace=test"
+I0605 00:23:58.899595  233998 log.go:245] Getting details of :clusterName cluster
+[GIN] 2025/06/05 - 00:23:58 | 200 |      53.335µs |       127.0.0.1 | GET      "/api/v1/config"
+E0605 00:23:58.905155  233998 handler.go:56] "GetClusterDetail failed" err="clusters.cluster.karmada.io \":clusterName\" not found"
+[GIN] 2025/06/05 - 00:23:58 | 200 |    5.668715ms |       127.0.0.1 | GET      "/api/v1/cluster/:clusterName"
+[GIN] 2025/06/05 - 00:23:59 | 200 |    6.692387ms |       127.0.0.1 | GET      "/api/v1/member/:clusterName/nodes"
+I0605 00:24:00.445128  233998 log.go:245] Getting list of namespaces
+I0605 00:24:00.445523  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+[GIN] 2025/06/05 - 00:24:00 | 200 |    6.810631ms |       127.0.0.1 | GET      "/api/v1/namespace"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:24:00 | 200 |   11.061099ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:24:00.470284  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:24:00 | 200 |   24.915185ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+I0605 00:24:01.552242  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter="default"
+I0605 00:24:01.567311  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=0 scheduledWorkloads=0 pendingWorkloads=0 namespaces=0
+[GIN] 2025/06/05 - 00:24:01 | 200 |   15.180207ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview?namespace=default"
+I0605 00:24:01.852359  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="default" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:24:01.855192  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="default" totalWorkloads=0 returnedWorkloads=0
+[GIN] 2025/06/05 - 00:24:01 | 200 |    2.988211ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/default/workloads?kind=deployment&page=1&pageSize=50"
+[GIN] 2025/06/05 - 00:24:03 | 200 |    5.486222ms |       127.0.0.1 | GET      "/api/v1/member/:clusterName/nodes"
+[GIN] 2025/06/05 - 00:24:03 | 200 |       53.82µs |       127.0.0.1 | GET      "/api/v1/config"
+I0605 00:24:03.048456  233998 log.go:245] Getting details of :clusterName cluster
+E0605 00:24:03.059512  233998 handler.go:56] "GetClusterDetail failed" err="clusters.cluster.karmada.io \":clusterName\" not found"
+[GIN] 2025/06/05 - 00:24:03 | 200 |   11.150582ms |       127.0.0.1 | GET      "/api/v1/cluster/:clusterName"
+I0605 00:24:03.987092  233998 log.go:245] Getting list of namespaces
+I0605 00:24:03.987246  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+[GIN] 2025/06/05 - 00:24:03 | 200 |    4.417376ms |       127.0.0.1 | GET      "/api/v1/namespace"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:24:03 | 200 |   10.920085ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:24:04.007321  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:24:04 | 200 |   20.183227ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+I0605 00:24:28.087832  233998 log.go:245] Getting list of namespaces
+I0605 00:24:28.090433  233998 log.go:245] Getting list of all deployments in the cluster
+[GIN] 2025/06/05 - 00:24:28 | 200 |    7.652906ms |       127.0.0.1 | GET      "/api/v1/namespace"
+[GIN] 2025/06/05 - 00:24:28 | 200 |    6.277158ms |       127.0.0.1 | GET      "/api/v1/deployment"
+I0605 00:24:35.459606  233998 log.go:245] Getting list of all stateful sets in the cluster
+[GIN] 2025/06/05 - 00:24:35 | 200 |    4.897546ms |       127.0.0.1 | GET      "/api/v1/statefulset"
+[GIN] 2025/06/05 - 00:24:36 | 200 |    7.764486ms |       127.0.0.1 | GET      "/api/v1/daemonset"
+I0605 00:24:36.742531  233998 log.go:245] Getting list of all jobs in the cluster
+[GIN] 2025/06/05 - 00:24:36 | 200 |    5.815584ms |       127.0.0.1 | GET      "/api/v1/job"
+I0605 00:24:36.832584  233998 log.go:245] Getting list of all cron jobs in the cluster
+[GIN] 2025/06/05 - 00:24:36 | 200 |    4.993351ms |       127.0.0.1 | GET      "/api/v1/cronjob"
+I0605 00:24:37.683649  233998 log.go:245] Getting list of all deployments in the cluster
+[GIN] 2025/06/05 - 00:24:37 | 200 |    5.535031ms |       127.0.0.1 | GET      "/api/v1/deployment"
+I0605 00:24:38.594789  233998 log.go:245] Getting list of namespaces
+[GIN] 2025/06/05 - 00:24:38 | 200 |    7.128665ms |       127.0.0.1 | GET      "/api/v1/namespace"
+I0605 00:24:40.415385  233998 log.go:245] Getting list of namespaces
+I0605 00:24:40.419072  233998 log.go:245] Getting list of all deployments in the cluster
+[GIN] 2025/06/05 - 00:24:40 | 200 |    6.397954ms |       127.0.0.1 | GET      "/api/v1/namespace"
+[GIN] 2025/06/05 - 00:24:40 | 200 |    8.710413ms |       127.0.0.1 | GET      "/api/v1/deployment"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:24:41 | 200 |   10.069703ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:24:42.174947  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+I0605 00:24:42.176092  233998 log.go:245] Getting list of namespaces
+[GIN] 2025/06/05 - 00:24:42 | 200 |    5.800238ms |       127.0.0.1 | GET      "/api/v1/namespace"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:24:42 | 200 |    8.855404ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:24:42.201008  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:24:42 | 200 |   26.167138ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+[GIN] 2025/06/05 - 00:24:51 | 200 |      54.126µs |       127.0.0.1 | GET      "/api/v1/config"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:24:51 | 200 |   11.929898ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:24:54.306613  233998 log.go:245] Getting details of :clusterName cluster
+[GIN] 2025/06/05 - 00:24:54 | 200 |    5.652029ms |       127.0.0.1 | GET      "/api/v1/member/:clusterName/nodes"
+E0605 00:24:54.311869  233998 handler.go:56] "GetClusterDetail failed" err="clusters.cluster.karmada.io \":clusterName\" not found"
+[GIN] 2025/06/05 - 00:24:54 | 200 |     5.37207ms |       127.0.0.1 | GET      "/api/v1/cluster/:clusterName"
+I0605 00:24:54.568690  233998 log.go:245] Getting list of namespaces
+[GIN] 2025/06/05 - 00:24:54 | 200 |     5.02294ms |       127.0.0.1 | GET      "/api/v1/namespace"
+I0605 00:24:54.875328  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:24:54 | 200 |    8.760639ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:24:54.893415  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:24:54 | 200 |   18.193128ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+[GIN] 2025/06/05 - 00:25:44 | 200 |      52.301µs |       127.0.0.1 | GET      "/api/v1/config"
+I0605 00:25:44.938215  233998 log.go:245] Getting details of :clusterName cluster
+E0605 00:25:44.944193  233998 handler.go:56] "GetClusterDetail failed" err="clusters.cluster.karmada.io \":clusterName\" not found"
+[GIN] 2025/06/05 - 00:25:44 | 200 |    6.091648ms |       127.0.0.1 | GET      "/api/v1/cluster/:clusterName"
+[GIN] 2025/06/05 - 00:25:44 | 200 |    5.358275ms |       127.0.0.1 | GET      "/api/v1/member/:clusterName/nodes"
+I0605 00:25:45.775278  233998 log.go:245] Getting list of namespaces
+[GIN] 2025/06/05 - 00:25:45 | 200 |    5.379877ms |       127.0.0.1 | GET      "/api/v1/namespace"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:25:45 | 200 |   10.433653ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:25:46.103254  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+I0605 00:25:46.121903  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:25:46 | 200 |   18.761011ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+I0605 00:26:47.730468  233998 log.go:245] Getting list of namespaces
+I0605 00:26:47.735388  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+[GIN] 2025/06/05 - 00:26:47 | 200 |    6.954434ms |       127.0.0.1 | GET      "/api/v1/namespace"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:26:47 | 200 |     8.77093ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:26:47.754111  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:26:47 | 200 |   18.865264ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+I0605 00:26:55.680905  233998 log.go:245] Getting list of namespaces
+I0605 00:26:55.683474  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+[GIN] 2025/06/05 - 00:26:55 | 200 |    6.381143ms |       127.0.0.1 | GET      "/api/v1/namespace"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:26:55 | 200 |   10.474084ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:26:55.708869  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:26:55 | 200 |   25.538658ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+I0605 00:27:02.677487  233998 log.go:245] Getting list of namespaces
+[GIN] 2025/06/05 - 00:27:02 | 200 |    6.093554ms |       127.0.0.1 | GET      "/api/v1/namespace"
+I0605 00:27:02.685983  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:27:02 | 200 |    9.715731ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:27:02.709390  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:27:02 | 200 |   23.514095ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+I0605 00:27:51.670889  233998 log.go:245] Getting list of namespaces
+I0605 00:27:51.671340  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+[GIN] 2025/06/05 - 00:27:51 | 200 |   11.368893ms |       127.0.0.1 | GET      "/api/v1/namespace"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:27:51 | 200 |   13.327729ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:27:51.694172  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:27:51 | 200 |   22.936855ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+I0605 00:27:59.670015  233998 log.go:245] Getting list of namespaces
+I0605 00:27:59.670432  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+[GIN] 2025/06/05 - 00:27:59 | 200 |    5.623016ms |       127.0.0.1 | GET      "/api/v1/namespace"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:27:59 | 200 |    9.588976ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:27:59.689706  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:27:59 | 200 |   19.376282ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+[GIN] 2025/06/05 - 00:28:00 | 200 |      92.424µs |       127.0.0.1 | GET      "/api/v1/config"
+I0605 00:28:00.317899  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+I0605 00:28:00.318211  233998 log.go:245] Getting list of namespaces
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:28:00 | 200 |     9.42638ms |       127.0.0.1 | GET      "/api/v1/cluster"
+[GIN] 2025/06/05 - 00:28:00 | 200 |    7.866479ms |       127.0.0.1 | GET      "/api/v1/namespace"
+[GIN] 2025/06/05 - 00:28:00 | 200 |   16.990884ms |       127.0.0.1 | GET      "/api/v1/me"
+I0605 00:28:00.344327  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:28:00 | 200 |   26.628183ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+I0605 00:28:23.144731  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter="test"
+I0605 00:28:23.157087  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=0 scheduledWorkloads=0 pendingWorkloads=0 namespaces=0
+[GIN] 2025/06/05 - 00:28:23 | 200 |   12.548807ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview?namespace=test"
+I0605 00:28:23.483629  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="test" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:28:23.486396  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="test" totalWorkloads=0 returnedWorkloads=0
+[GIN] 2025/06/05 - 00:28:23 | 200 |    2.981319ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/test/workloads?kind=deployment&page=1&pageSize=50"
+I0605 00:28:27.190299  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="kube-public" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:28:27.190539  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter="kube-public"
+I0605 00:28:27.192973  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="kube-public" totalWorkloads=0 returnedWorkloads=0
+[GIN] 2025/06/05 - 00:28:27 | 200 |    2.823224ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/kube-public/workloads?kind=deployment&page=1&pageSize=50"
+I0605 00:28:27.200722  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=0 scheduledWorkloads=0 pendingWorkloads=0 namespaces=0
+[GIN] 2025/06/05 - 00:28:27 | 200 |   10.319231ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview?namespace=kube-public"
+I0605 00:28:28.258980  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter="karmada-cluster"
+I0605 00:28:28.272047  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=0 scheduledWorkloads=0 pendingWorkloads=0 namespaces=0
+[GIN] 2025/06/05 - 00:28:28 | 200 |   13.219726ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview?namespace=karmada-cluster"
+I0605 00:28:28.588153  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="karmada-cluster" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:28:28.591034  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="karmada-cluster" totalWorkloads=0 returnedWorkloads=0
+[GIN] 2025/06/05 - 00:28:28 | 200 |    3.027472ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/karmada-cluster/workloads?kind=deployment&page=1&pageSize=50"
+I0605 00:28:29.967429  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="default" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:28:29.970167  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="default" totalWorkloads=0 returnedWorkloads=0
+[GIN] 2025/06/05 - 00:28:29 | 200 |    2.878058ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/default/workloads?kind=deployment&page=1&pageSize=50"
+I0605 00:28:29.973188  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter="default"
+I0605 00:28:29.984002  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=0 scheduledWorkloads=0 pendingWorkloads=0 namespaces=0
+[GIN] 2025/06/05 - 00:28:29 | 200 |   10.952293ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview?namespace=default"
+I0605 00:28:32.398951  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter="test"
+I0605 00:28:32.411990  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=0 scheduledWorkloads=0 pendingWorkloads=0 namespaces=0
+[GIN] 2025/06/05 - 00:28:32 | 200 |   13.224922ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview?namespace=test"
+I0605 00:28:32.735882  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="test" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:28:32.739172  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="test" totalWorkloads=0 returnedWorkloads=0
+[GIN] 2025/06/05 - 00:28:32 | 200 |    3.443834ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/test/workloads?kind=deployment&page=1&pageSize=50"
+I0605 00:28:34.578237  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="karmada-system" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:28:34.586494  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter="karmada-system"
+I0605 00:28:34.587880  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="karmada-system" totalWorkloads=6 returnedWorkloads=6
+[GIN] 2025/06/05 - 00:28:34 | 200 |   10.040945ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/karmada-system/workloads?kind=deployment&page=1&pageSize=50"
+I0605 00:28:34.603519  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=7 scheduledWorkloads=7 pendingWorkloads=0 namespaces=1
+[GIN] 2025/06/05 - 00:28:34 | 200 |   17.139637ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview?namespace=karmada-system"
+I0605 00:28:37.060751  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter="karmada-es-branch"
+I0605 00:28:37.072196  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=0 scheduledWorkloads=0 pendingWorkloads=0 namespaces=0
+[GIN] 2025/06/05 - 00:28:37 | 200 |   11.573232ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview?namespace=karmada-es-branch"
+I0605 00:28:37.385925  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="karmada-es-branch" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:28:37.388853  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="karmada-es-branch" totalWorkloads=0 returnedWorkloads=0
+[GIN] 2025/06/05 - 00:28:37 | 200 |    3.097539ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/karmada-es-branch/workloads?kind=deployment&page=1&pageSize=50"
+I0605 00:28:38.759615  233998 handler.go:799] "开始获取命名空间工作负载调度信息" namespace="test" page=1 pageSize=50 kindFilter="deployment"
+I0605 00:28:38.762498  233998 handler.go:919] "完成命名空间工作负载调度信息获取" namespace="test" totalWorkloads=0 returnedWorkloads=0
+[GIN] 2025/06/05 - 00:28:38 | 200 |    3.009555ms |       127.0.0.1 | GET      "/api/v1/scheduling/namespace/test/workloads?kind=deployment&page=1&pageSize=50"
+I0605 00:28:38.764395  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter="test"
+I0605 00:28:38.776823  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=0 scheduledWorkloads=0 pendingWorkloads=0 namespaces=0
+[GIN] 2025/06/05 - 00:28:38 | 200 |   12.552085ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview?namespace=test"
+I0605 00:28:52.365645  233998 log.go:245] Getting list of namespaces
+[GIN] 2025/06/05 - 00:28:52 | 200 |   24.238901ms |       127.0.0.1 | GET      "/api/v1/propagationpolicy"
+I0605 00:28:52.731864  233998 log.go:245] Getting list of namespaces
+[GIN] 2025/06/05 - 00:28:52 | 200 |    7.154131ms |       127.0.0.1 | GET      "/api/v1/namespace"
+I0605 00:28:53.481969  233998 log.go:245] Getting list of namespaces
+I0605 00:28:53.482336  233998 log.go:245] Getting list of all deployments in the cluster
+[GIN] 2025/06/05 - 00:28:53 | 200 |    8.772434ms |       127.0.0.1 | GET      "/api/v1/deployment"
+[GIN] 2025/06/05 - 00:28:53 | 200 |    9.570687ms |       127.0.0.1 | GET      "/api/v1/namespace"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:29:02 | 200 |   10.800969ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:29:03.973346  233998 log.go:245] Getting list of namespaces
+[GIN] 2025/06/05 - 00:29:03 | 200 |    5.208895ms |       127.0.0.1 | GET      "/api/v1/namespace"
+I0605 00:29:03.980044  233998 log.go:245] Getting list of namespaces
+[GIN] 2025/06/05 - 00:29:03 | 200 |   10.431599ms |       127.0.0.1 | GET      "/api/v1/propagationpolicy"
+I0605 00:29:05.008507  233998 log.go:245] Getting details of :clusterName cluster
+E0605 00:29:05.014089  233998 handler.go:56] "GetClusterDetail failed" err="clusters.cluster.karmada.io \":clusterName\" not found"
+[GIN] 2025/06/05 - 00:29:05 | 200 |    5.722279ms |       127.0.0.1 | GET      "/api/v1/cluster/:clusterName"
+[GIN] 2025/06/05 - 00:29:05 | 200 |    5.619799ms |       127.0.0.1 | GET      "/api/v1/member/:clusterName/nodes"
+I0605 00:29:06.110143  233998 log.go:245] Getting list of namespaces
+I0605 00:29:06.114156  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+[GIN] 2025/06/05 - 00:29:06 | 200 |    5.612985ms |       127.0.0.1 | GET      "/api/v1/namespace"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:29:06 | 200 |   10.850658ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:29:06.136498  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:29:06 | 200 |   22.470347ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"
+[GIN] 2025/06/05 - 00:29:44 | 200 |   14.882809ms |       127.0.0.1 | GET      "/api/v1/me"
+[GIN] 2025/06/05 - 00:29:44 | 200 |      59.337µs |       127.0.0.1 | GET      "/api/v1/config"
+I0605 00:29:44.395620  233998 handler.go:606] "开始获取调度概览信息" namespaceFilter=""
+I0605 00:29:44.396069  233998 log.go:245] Getting list of namespaces
+[GIN] 2025/06/05 - 00:29:44 | 200 |    5.426984ms |       127.0.0.1 | GET      "/api/v1/namespace"
+27487340Ki
+19486736384
+31267216Ki
+18280873984
+[GIN] 2025/06/05 - 00:29:44 | 200 |    9.943152ms |       127.0.0.1 | GET      "/api/v1/cluster"
+I0605 00:29:44.415900  233998 handler.go:762] "完成调度概览信息获取" totalWorkloads=13 scheduledWorkloads=13 pendingWorkloads=0 namespaces=2
+[GIN] 2025/06/05 - 00:29:44 | 200 |   20.431987ms |       127.0.0.1 | GET      "/api/v1/scheduling/overview"

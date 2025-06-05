@@ -1,0 +1,213 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-frontend
+  namespace: test
+  labels:
+    app: web-frontend
+    tier: frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-frontend
+  template:
+    metadata:
+      labels:
+        app: web-frontend
+        tier: frontend
+    spec:
+      containers:
+      - name: web
+        image: busybox
+        command: ['sh', '-c', 'echo "Frontend service running..." && sleep 3600']
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-backend
+  namespace: test
+  labels:
+    app: api-backend
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-backend
+  template:
+    metadata:
+      labels:
+        app: api-backend
+        tier: backend
+    spec:
+      containers:
+      - name: api
+        image: busybox
+        command: ['sh', '-c', 'echo "API backend running..." && sleep 3600']
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: database
+  namespace: test
+  labels:
+    app: database
+    tier: database
+spec:
+  serviceName: database
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      labels:
+        app: database
+        tier: database
+    spec:
+      containers:
+      - name: db
+        image: busybox
+        command: ['sh', '-c', 'echo "Database running..." && sleep 3600']
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "500m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: monitoring-agent
+  namespace: test
+  labels:
+    app: monitoring-agent
+spec:
+  selector:
+    matchLabels:
+      app: monitoring-agent
+  template:
+    metadata:
+      labels:
+        app: monitoring-agent
+    spec:
+      containers:
+      - name: agent
+        image: busybox
+        command: ['sh', '-c', 'echo "Monitoring agent running..." && sleep 3600']
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: microservice-a
+  namespace: production
+  labels:
+    app: microservice-a
+    version: v1.0.0
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: microservice-a
+  template:
+    metadata:
+      labels:
+        app: microservice-a
+        version: v1.0.0
+    spec:
+      containers:
+      - name: service
+        image: busybox
+        command: ['sh', '-c', 'echo "Microservice A running..." && sleep 3600']
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: microservice-b
+  namespace: production
+  labels:
+    app: microservice-b
+    version: v2.1.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: microservice-b
+  template:
+    metadata:
+      labels:
+        app: microservice-b
+        version: v2.1.0
+    spec:
+      containers:
+      - name: service
+        image: busybox
+        command: ['sh', '-c', 'echo "Microservice B running..." && sleep 3600']
+        resources:
+          requests:
+            memory: "96Mi"
+            cpu: "200m"
+          limits:
+            memory: "192Mi"
+            cpu: "400m"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cache-cluster
+  namespace: production
+  labels:
+    app: cache-cluster
+spec:
+  serviceName: cache-cluster
+  replicas: 3
+  selector:
+    matchLabels:
+      app: cache-cluster
+  template:
+    metadata:
+      labels:
+        app: cache-cluster
+    spec:
+      containers:
+      - name: cache
+        image: busybox
+        command: ['sh', '-c', 'echo "Cache cluster node running..." && sleep 3600']
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "300m"
+          limits:
+            memory: "512Mi"
+            cpu: "600m" 

@@ -7,10 +7,11 @@ package scheduling
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/karmada-io/karmada/pkg/apis/policy/v1alpha1"
-	workv1alpha1 "github.com/karmada-io/karmada/pkg/apis/work/v1alpha1"
+	workv1alpha2 "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2"
 	karmadaclientset "github.com/karmada-io/karmada/pkg/generated/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -95,15 +96,24 @@ func GetWorkloadScheduling(karmadaClient karmadaclientset.Interface, namespace, 
 }
 
 func getWorkloadInfo(karmadaClient karmadaclientset.Interface, namespace, name, kind string) (*WorkloadInfo, error) {
-	// 获取ResourceBinding来获取工作负载信息
-	bindings, err := karmadaClient.WorkV1alpha1().ResourceBindings(namespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("resourcebinding.karmada.io/name=%s", name),
-	})
+	// 获取所有ResourceBinding并查找匹配的
+	bindings, err := karmadaClient.WorkV1alpha2().ResourceBindings(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list resource bindings: %w", err)
 	}
 
-	if len(bindings.Items) == 0 {
+	// 查找匹配的ResourceBinding
+	var matchedBinding *workv1alpha2.ResourceBinding
+	for _, binding := range bindings.Items {
+		if binding.Spec.Resource.Kind == kind && 
+		   binding.Spec.Resource.Name == name && 
+		   binding.Spec.Resource.Namespace == namespace {
+			matchedBinding = &binding
+			break
+		}
+	}
+
+	if matchedBinding == nil {
 		// 如果没有ResourceBinding，返回基本信息而不是错误
 		return &WorkloadInfo{
 			Name:          name,
@@ -115,16 +125,13 @@ func getWorkloadInfo(karmadaClient karmadaclientset.Interface, namespace, name, 
 		}, nil
 	}
 
-	// 从ResourceBinding中提取工作负载信息
-	binding := bindings.Items[0]
-
 	return &WorkloadInfo{
 		Name:          name,
 		Namespace:     namespace,
 		Kind:          kind,
-		APIVersion:    "apps/v1", // 简化处理
-		Replicas:      calculateTotalReplicas(binding.Spec.Clusters),
-		ReadyReplicas: calculateReadyReplicas(binding.Status.AggregatedStatus),
+		APIVersion:    matchedBinding.Spec.Resource.APIVersion,
+		Replicas:      calculateTotalReplicas(matchedBinding.Spec.Clusters),
+		ReadyReplicas: calculateReadyReplicas(matchedBinding.Status.AggregatedStatus),
 	}, nil
 }
 
@@ -171,34 +178,42 @@ func findAssociatedOverridePolicy(karmadaClient karmadaclientset.Interface, name
 }
 
 func getClusterPlacementsFromBinding(karmadaClient karmadaclientset.Interface, namespace, name, kind string) ([]ClusterPlacement, SchedulingStatus, error) {
-	// 获取ResourceBinding
-	bindings, err := karmadaClient.WorkV1alpha1().ResourceBindings(namespace).List(context.TODO(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("resourcebinding.karmada.io/name=%s", name),
-	})
+	// 获取所有ResourceBinding并查找匹配的
+	bindings, err := karmadaClient.WorkV1alpha2().ResourceBindings(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return nil, SchedulingStatus{Phase: "Failed", Message: err.Error()}, err
 	}
 
-	if len(bindings.Items) == 0 {
+	// 查找匹配的ResourceBinding
+	var matchedBinding *workv1alpha2.ResourceBinding
+	for _, binding := range bindings.Items {
+		if binding.Spec.Resource.Kind == kind && 
+		   binding.Spec.Resource.Name == name && 
+		   binding.Spec.Resource.Namespace == namespace {
+			matchedBinding = &binding
+			break
+		}
+	}
+
+	if matchedBinding == nil {
 		return nil, SchedulingStatus{Phase: "Pending", Message: "No resource binding found"}, nil
 	}
 
-	binding := bindings.Items[0]
-	placements := make([]ClusterPlacement, 0, len(binding.Spec.Clusters))
+	placements := make([]ClusterPlacement, 0, len(matchedBinding.Spec.Clusters))
 
-	for _, cluster := range binding.Spec.Clusters {
+	for _, cluster := range matchedBinding.Spec.Clusters {
 		placement := ClusterPlacement{
 			ClusterName:     cluster.Name,
 			PlannedReplicas: cluster.Replicas,
-			ActualReplicas:  getActualReplicasFromStatus(binding.Status.AggregatedStatus, cluster.Name),
+			ActualReplicas:  getActualReplicasFromStatus(matchedBinding.Status.AggregatedStatus, cluster.Name),
 			Reason:          generatePlacementReason(cluster),
 		}
 		placements = append(placements, placement)
 	}
 
 	status := SchedulingStatus{
-		Phase:   determineSchedulingPhase(binding.Status),
-		Message: generateSchedulingMessage(binding.Status),
+		Phase:   determineSchedulingPhase(matchedBinding.Status),
+		Message: generateSchedulingMessage(matchedBinding.Status),
 	}
 
 	return placements, status, nil
@@ -220,7 +235,7 @@ func isPolicyMatchingWorkload(resourceSelectors []v1alpha1.ResourceSelector, nam
 	return false
 }
 
-func calculateTotalReplicas(clusters []workv1alpha1.TargetCluster) int32 {
+func calculateTotalReplicas(clusters []workv1alpha2.TargetCluster) int32 {
 	total := int32(0)
 	for _, cluster := range clusters {
 		total += cluster.Replicas
@@ -228,25 +243,75 @@ func calculateTotalReplicas(clusters []workv1alpha1.TargetCluster) int32 {
 	return total
 }
 
-func calculateReadyReplicas(aggregatedStatus []workv1alpha1.AggregatedStatusItem) int32 {
-	// 简化实现，实际需要解析状态
+func calculateReadyReplicas(aggregatedStatus []workv1alpha2.AggregatedStatusItem) int32 {
+	readyReplicas := int32(0)
+	for _, status := range aggregatedStatus {
+		if status.Status != nil && status.Status.Raw != nil {
+			var statusMap map[string]interface{}
+			if err := json.Unmarshal(status.Status.Raw, &statusMap); err != nil {
+				continue
+			}
+			
+			// 尝试获取readyReplicas字段
+			if readyReplicasInterface, exists := statusMap["readyReplicas"]; exists {
+				switch readyReplicasVal := readyReplicasInterface.(type) {
+				case int32:
+					readyReplicas += readyReplicasVal
+				case int:
+					readyReplicas += int32(readyReplicasVal)
+				case float64:
+					readyReplicas += int32(readyReplicasVal)
+				}
+			}
+		}
+	}
+	return readyReplicas
+}
+
+func getActualReplicasFromStatus(aggregatedStatus []workv1alpha2.AggregatedStatusItem, clusterName string) int32 {
+	for _, status := range aggregatedStatus {
+		if status.ClusterName == clusterName && status.Status != nil && status.Status.Raw != nil {
+			var statusMap map[string]interface{}
+			if err := json.Unmarshal(status.Status.Raw, &statusMap); err != nil {
+				continue
+			}
+			
+			// 优先使用readyReplicas，其次使用availableReplicas
+			if readyReplicasInterface, exists := statusMap["readyReplicas"]; exists {
+				switch readyReplicasVal := readyReplicasInterface.(type) {
+				case int32:
+					return readyReplicasVal
+				case int:
+					return int32(readyReplicasVal)
+				case float64:
+					return int32(readyReplicasVal)
+				}
+			}
+			
+			if availableReplicasInterface, exists := statusMap["availableReplicas"]; exists {
+				switch availableReplicasVal := availableReplicasInterface.(type) {
+				case int32:
+					return availableReplicasVal
+				case int:
+					return int32(availableReplicasVal)
+				case float64:
+					return int32(availableReplicasVal)
+				}
+			}
+		}
+	}
 	return 0
 }
 
-func getActualReplicasFromStatus(aggregatedStatus []workv1alpha1.AggregatedStatusItem, clusterName string) int32 {
-	// 简化实现，实际需要从状态中提取
-	return 0
-}
-
-func generatePlacementReason(cluster workv1alpha1.TargetCluster) string {
+func generatePlacementReason(cluster workv1alpha2.TargetCluster) string {
 	return fmt.Sprintf("根据调度策略分配 %d 个副本", cluster.Replicas)
 }
 
-func determineSchedulingPhase(status workv1alpha1.ResourceBindingStatus) string {
+func determineSchedulingPhase(status workv1alpha2.ResourceBindingStatus) string {
 	// 简化实现，实际需要分析条件
 	return "Scheduled"
 }
 
-func generateSchedulingMessage(status workv1alpha1.ResourceBindingStatus) string {
+func generateSchedulingMessage(status workv1alpha2.ResourceBindingStatus) string {
 	return "所有副本都已成功调度到目标集群"
 }

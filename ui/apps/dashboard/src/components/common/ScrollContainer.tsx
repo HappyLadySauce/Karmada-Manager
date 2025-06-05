@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { BackTop } from 'antd';
+import { FloatButton } from 'antd';
 import { VerticalAlignTopOutlined } from '@ant-design/icons';
 
 interface ScrollContainerProps {
@@ -116,7 +116,7 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({
 
       {/* 回到顶部按钮 */}
       {showBackTop && (
-        <BackTop
+        <FloatButton.BackTop
           style={{
             height: 48,
             width: 48,
@@ -132,7 +132,7 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({
           target={() => scrollContainerRef.current as HTMLElement}
           onClick={() => {
             // 添加点击动画效果
-            const backTopElement = document.querySelector('.ant-back-top') as HTMLElement;
+            const backTopElement = document.querySelector('.ant-float-btn') as HTMLElement;
             if (backTopElement) {
               backTopElement.style.transform = 'scale(0.9)';
               setTimeout(() => {
@@ -140,31 +140,8 @@ const ScrollContainer: React.FC<ScrollContainerProps> = ({
               }, 150);
             }
           }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '100%',
-              height: '100%',
-            }}
-            onMouseEnter={(e) => {
-              const target = e.currentTarget.parentElement as HTMLElement;
-              target.style.backgroundColor = '#40a9ff';
-              target.style.transform = 'scale(1.1)';
-              target.style.boxShadow = '0 6px 16px rgba(24, 144, 255, 0.6)';
-            }}
-            onMouseLeave={(e) => {
-              const target = e.currentTarget.parentElement as HTMLElement;
-              target.style.backgroundColor = '#1890ff';
-              target.style.transform = 'scale(1)';
-              target.style.boxShadow = '0 4px 12px rgba(24, 144, 255, 0.4)';
-            }}
-          >
-            <VerticalAlignTopOutlined />
-          </div>
-        </BackTop>
+          icon={<VerticalAlignTopOutlined />}
+        />
       )}
     </div>
   );

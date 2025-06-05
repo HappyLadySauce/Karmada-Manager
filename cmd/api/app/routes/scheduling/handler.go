@@ -7,6 +7,7 @@ package scheduling
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/karmada-io/dashboard/cmd/api/app/types/common"
 	"github.com/karmada-io/dashboard/pkg/client"
 	schedulingpkg "github.com/karmada-io/dashboard/pkg/resource/scheduling"
+	workv1alpha2 "github.com/karmada-io/karmada/pkg/apis/work/v1alpha2"
 	karmadaclientset "github.com/karmada-io/karmada/pkg/generated/clientset/versioned"
 )
 
@@ -502,25 +504,32 @@ func getPodsOnNodeForWorkload(memberClient kubernetes.Interface, nodeName string
 
 // 判断 Pod 是否属于指定工作负载
 func isWorkloadPod(pod *corev1.Pod, workloadInfo schedulingpkg.WorkloadInfo) bool {
-	// 检查 OwnerReference
-	for _, ownerRef := range pod.OwnerReferences {
-		if ownerRef.Kind == workloadInfo.Kind && ownerRef.Name == workloadInfo.Name {
+	// 首先检查标签（这是最直接的方式）
+	if pod.Labels != nil {
+		// 检查 app 标签
+		if appName, exists := pod.Labels["app"]; exists && appName == workloadInfo.Name {
 			return true
 		}
-		// 对于 Deployment，Pod 的直接所有者是 ReplicaSet
-		if workloadInfo.Kind == "Deployment" && ownerRef.Kind == "ReplicaSet" {
-			// 可以进一步检查 ReplicaSet 的所有者是否是目标 Deployment
+		// 检查 app.kubernetes.io/name 标签
+		if appName, exists := pod.Labels["app.kubernetes.io/name"]; exists && appName == workloadInfo.Name {
 			return true
 		}
 	}
 
-	// 检查标签
-	if pod.Labels != nil {
-		if appName, exists := pod.Labels["app"]; exists && appName == workloadInfo.Name {
+	// 检查 OwnerReference (更严格的匹配)
+	for _, ownerRef := range pod.OwnerReferences {
+		if ownerRef.Kind == workloadInfo.Kind && ownerRef.Name == workloadInfo.Name {
 			return true
 		}
-		if appName, exists := pod.Labels["app.kubernetes.io/name"]; exists && appName == workloadInfo.Name {
-			return true
+		// 对于 Deployment，需要检查 ReplicaSet 的所有者
+		if workloadInfo.Kind == "Deployment" && ownerRef.Kind == "ReplicaSet" {
+			// 在实际应用中，这里应该查询ReplicaSet的OwnerReference
+			// 暂时通过Pod的标签进行简化匹配
+			if pod.Labels != nil {
+				if appName, exists := pod.Labels["app"]; exists && appName == workloadInfo.Name {
+					return true
+				}
+			}
 		}
 	}
 
@@ -601,36 +610,324 @@ func getTotalRestartCount(containerStatuses []corev1.ContainerStatus) int32 {
 
 // 获取调度概览信息
 func getSchedulingOverview(karmadaClient karmadaclientset.Interface, namespaceFilter string) (*SchedulingOverview, error) {
-	// TODO: 实现完整的概览统计逻辑
-	// 这里提供一个基础框架
+	klog.InfoS("开始获取调度概览", "namespaceFilter", namespaceFilter)
 	
+	// 获取所有ResourceBinding
+	var resourceBindings []workv1alpha2.ResourceBinding
+	if namespaceFilter != "" {
+		bindings, err := karmadaClient.WorkV1alpha2().ResourceBindings(namespaceFilter).List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list resource bindings in namespace %s: %w", namespaceFilter, err)
+		}
+		resourceBindings = bindings.Items
+	} else {
+		// 获取所有命名空间的ResourceBinding
+		bindings, err := karmadaClient.WorkV1alpha2().ResourceBindings("").List(context.TODO(), metav1.ListOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list all resource bindings: %w", err)
+		}
+		resourceBindings = bindings.Items
+	}
+
+	klog.InfoS("获取到ResourceBinding列表", "count", len(resourceBindings))
+
+	// 统计概览信息
 	overview := &SchedulingOverview{
-		TotalWorkloads:      0,
+		TotalWorkloads:      int32(len(resourceBindings)),
 		ScheduledWorkloads:  0,
 		PendingWorkloads:    0,
 		FailedWorkloads:     0,
 		ClusterDistribution: []ClusterDistribution{},
 		NamespaceStats:      []NamespaceSchedulingStats{},
 	}
-	
+
+	// 集群分布统计
+	clusterStats := make(map[string]*ClusterDistribution)
+	// 命名空间统计
+	namespaceStats := make(map[string]*NamespaceSchedulingStats)
+
+	for _, binding := range resourceBindings {
+		// 统计工作负载状态
+		if isWorkloadScheduled(binding) {
+			overview.ScheduledWorkloads++
+		} else if isWorkloadPending(binding) {
+			overview.PendingWorkloads++
+		} else {
+			overview.FailedWorkloads++
+		}
+
+		// 统计集群分布
+		for _, cluster := range binding.Spec.Clusters {
+			if clusterStats[cluster.Name] == nil {
+				clusterStats[cluster.Name] = &ClusterDistribution{
+					ClusterName:    cluster.Name,
+					WorkloadCount:  0,
+					TotalReplicas:  0,
+					ReadyReplicas:  0,
+					ClusterStatus:  "Ready", // 简化处理
+				}
+			}
+			clusterStats[cluster.Name].WorkloadCount++
+			clusterStats[cluster.Name].TotalReplicas += cluster.Replicas
+			clusterStats[cluster.Name].ReadyReplicas += getActualReplicasFromBinding(binding, cluster.Name)
+		}
+
+		// 统计命名空间分布
+		namespace := binding.Namespace
+		if namespaceStats[namespace] == nil {
+			namespaceStats[namespace] = &NamespaceSchedulingStats{
+				Namespace:      namespace,
+				WorkloadCount:  0,
+				ScheduledCount: 0,
+				PendingCount:   0,
+				FailedCount:    0,
+			}
+		}
+		namespaceStats[namespace].WorkloadCount++
+		if isWorkloadScheduled(binding) {
+			namespaceStats[namespace].ScheduledCount++
+		} else if isWorkloadPending(binding) {
+			namespaceStats[namespace].PendingCount++
+		} else {
+			namespaceStats[namespace].FailedCount++
+		}
+	}
+
+	// 转换map为slice
+	for _, clusterStat := range clusterStats {
+		overview.ClusterDistribution = append(overview.ClusterDistribution, *clusterStat)
+	}
+	for _, namespaceStat := range namespaceStats {
+		overview.NamespaceStats = append(overview.NamespaceStats, *namespaceStat)
+	}
+
+	klog.InfoS("调度概览统计完成", 
+		"totalWorkloads", overview.TotalWorkloads,
+		"scheduledWorkloads", overview.ScheduledWorkloads,
+		"clusterCount", len(overview.ClusterDistribution),
+		"namespaceCount", len(overview.NamespaceStats))
+
 	return overview, nil
 }
 
 // 获取命名空间工作负载调度信息
 func getNamespaceWorkloadsScheduling(karmadaClient karmadaclientset.Interface, namespace string, page, pageSize int, kindFilter string) (interface{}, error) {
-	// TODO: 实现批量获取逻辑
-	// 这里提供一个基础框架
-	
+	klog.InfoS("开始获取命名空间工作负载调度信息", 
+		"namespace", namespace, 
+		"page", page, 
+		"pageSize", pageSize,
+		"kindFilter", kindFilter)
+
+	// 获取指定命名空间的ResourceBinding
+	bindings, err := karmadaClient.WorkV1alpha2().ResourceBindings(namespace).List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list resource bindings in namespace %s: %w", namespace, err)
+	}
+
+	klog.InfoS("获取到ResourceBinding列表", "namespace", namespace, "count", len(bindings.Items))
+
+	// 根据kindFilter过滤
+	var filteredBindings []workv1alpha2.ResourceBinding
+	for _, binding := range bindings.Items {
+		if kindFilter == "" || binding.Spec.Resource.Kind == kindFilter {
+			filteredBindings = append(filteredBindings, binding)
+		}
+	}
+
+	klog.InfoS("过滤后的ResourceBinding", "filteredCount", len(filteredBindings))
+
+	// 分页处理
+	total := len(filteredBindings)
+	start := (page - 1) * pageSize
+	end := start + pageSize
+
+	if start >= total {
+		start = total
+	}
+	if end > total {
+		end = total
+	}
+
+	pagedBindings := filteredBindings[start:end]
+
+	// 转换为前端所需的格式
+	workloadViews := make([]interface{}, 0, len(pagedBindings))
+	for _, binding := range pagedBindings {
+		workloadView, err := convertResourceBindingToWorkloadView(binding)
+		if err != nil {
+			klog.ErrorS(err, "转换ResourceBinding失败", "name", binding.Name)
+			continue
+		}
+		workloadViews = append(workloadViews, workloadView)
+	}
+
 	result := map[string]interface{}{
-		"data": []interface{}{},
+		"data": workloadViews,
 		"pagination": map[string]interface{}{
 			"page":     page,
 			"pageSize": pageSize,
-			"total":    0,
+			"total":    total,
 		},
 	}
-	
+
+	klog.InfoS("完成命名空间工作负载调度信息获取", 
+		"namespace", namespace,
+		"returnedCount", len(workloadViews),
+		"total", total)
+
 	return result, nil
+}
+
+// 辅助函数：判断工作负载是否已调度
+func isWorkloadScheduled(binding workv1alpha2.ResourceBinding) bool {
+	// 首先检查Scheduled条件
+	for _, condition := range binding.Status.Conditions {
+		if condition.Type == "Scheduled" && condition.Status == metav1.ConditionTrue {
+			return true
+		}
+	}
+	// 如果没有明确的Scheduled条件，但有集群分配，也认为已调度
+	return len(binding.Spec.Clusters) > 0
+}
+
+// 辅助函数：判断工作负载是否处于待调度状态
+func isWorkloadPending(binding workv1alpha2.ResourceBinding) bool {
+	// 首先检查Scheduled条件是否为False
+	for _, condition := range binding.Status.Conditions {
+		if condition.Type == "Scheduled" && condition.Status == metav1.ConditionFalse {
+			return true
+		}
+	}
+	// 如果没有集群分配，也认为待调度
+	if len(binding.Spec.Clusters) == 0 {
+		return true
+	}
+	// 检查是否有FullyApplied条件为False（部分调度失败）
+	for _, condition := range binding.Status.Conditions {
+		if condition.Type == "FullyApplied" && condition.Status == metav1.ConditionFalse {
+			return true
+		}
+	}
+	return false
+}
+
+// 辅助函数：将ResourceBinding转换为工作负载视图
+func convertResourceBindingToWorkloadView(binding workv1alpha2.ResourceBinding) (interface{}, error) {
+	// 计算集群分布
+	clusterPlacements := make([]schedulingpkg.ClusterPlacement, 0, len(binding.Spec.Clusters))
+	totalReplicas := int32(0)
+	
+	for _, cluster := range binding.Spec.Clusters {
+		actualReplicas := getActualReplicasFromBinding(binding, cluster.Name)
+		placement := schedulingpkg.ClusterPlacement{
+			ClusterName:     cluster.Name,
+			PlannedReplicas: cluster.Replicas,
+			ActualReplicas:  actualReplicas,
+			Reason:          fmt.Sprintf("根据调度策略分配 %d 个副本", cluster.Replicas),
+		}
+		clusterPlacements = append(clusterPlacements, placement)
+		totalReplicas += cluster.Replicas
+	}
+
+	// 确定调度状态
+	var schedulingStatus schedulingpkg.SchedulingStatus
+	if isWorkloadScheduled(binding) {
+		schedulingStatus = schedulingpkg.SchedulingStatus{
+			Phase:   "Scheduled",
+			Message: "工作负载已成功调度到目标集群",
+		}
+	} else if isWorkloadPending(binding) {
+		schedulingStatus = schedulingpkg.SchedulingStatus{
+			Phase:   "Pending",
+			Message: "工作负载等待调度",
+		}
+	} else {
+		schedulingStatus = schedulingpkg.SchedulingStatus{
+			Phase:   "Failed",
+			Message: "工作负载调度失败",
+		}
+	}
+
+	workloadInfo := schedulingpkg.WorkloadInfo{
+		Name:          binding.Spec.Resource.Name,
+		Namespace:     binding.Spec.Resource.Namespace,
+		Kind:          binding.Spec.Resource.Kind,
+		APIVersion:    binding.Spec.Resource.APIVersion,
+		Replicas:      totalReplicas,
+		ReadyReplicas: calculateReadyReplicasFromStatus(binding.Status.AggregatedStatus),
+	}
+
+	return map[string]interface{}{
+		"workloadInfo":      workloadInfo,
+		"clusterPlacements": clusterPlacements,
+		"schedulingStatus":  schedulingStatus,
+		"totalReplicas":     totalReplicas,
+		"readyReplicas":     workloadInfo.ReadyReplicas,
+		"createdTime":       binding.CreationTimestamp,
+	}, nil
+}
+
+// 辅助函数：从聚合状态计算就绪副本数
+func calculateReadyReplicasFromStatus(aggregatedStatus []workv1alpha2.AggregatedStatusItem) int32 {
+	readyReplicas := int32(0)
+	for _, status := range aggregatedStatus {
+		if status.Status != nil && status.Status.Raw != nil {
+			// 解析status字段，它包含具体的部署状态
+			var statusMap map[string]interface{}
+			if err := json.Unmarshal(status.Status.Raw, &statusMap); err != nil {
+				continue
+			}
+			
+			// 尝试获取readyReplicas字段
+			if readyReplicasInterface, exists := statusMap["readyReplicas"]; exists {
+				switch readyReplicasVal := readyReplicasInterface.(type) {
+				case int32:
+					readyReplicas += readyReplicasVal
+				case int:
+					readyReplicas += int32(readyReplicasVal)
+				case float64:
+					readyReplicas += int32(readyReplicasVal)
+				}
+			}
+		}
+	}
+	return readyReplicas
+}
+
+// 辅助函数：从ResourceBinding中获取特定集群的实际副本数
+func getActualReplicasFromBinding(binding workv1alpha2.ResourceBinding, clusterName string) int32 {
+	for _, status := range binding.Status.AggregatedStatus {
+		if status.ClusterName == clusterName && status.Status != nil && status.Status.Raw != nil {
+			var statusMap map[string]interface{}
+			if err := json.Unmarshal(status.Status.Raw, &statusMap); err != nil {
+				continue
+			}
+			
+			// 优先使用readyReplicas，其次使用availableReplicas
+			if readyReplicasInterface, exists := statusMap["readyReplicas"]; exists {
+				switch readyReplicasVal := readyReplicasInterface.(type) {
+				case int32:
+					return readyReplicasVal
+				case int:
+					return int32(readyReplicasVal)
+				case float64:
+					return int32(readyReplicasVal)
+				}
+			}
+			
+			if availableReplicasInterface, exists := statusMap["availableReplicas"]; exists {
+				switch availableReplicasVal := availableReplicasInterface.(type) {
+				case int32:
+					return availableReplicasVal
+				case int:
+					return int32(availableReplicasVal)
+				case float64:
+					return int32(availableReplicasVal)
+				}
+			}
+		}
+	}
+	return 0
 }
 
 func init() {
