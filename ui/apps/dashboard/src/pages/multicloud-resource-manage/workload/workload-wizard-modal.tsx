@@ -1834,22 +1834,8 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
     const yamlObject = generateYAML(workloadConfig);
     const yamlContent = stringify(yamlObject);
     
-    // 计算副本数显示
-    const getReplicasInfo = () => {
-      if (kind === WorkloadKind.Daemonset) {
-        return '每个节点运行一个副本';
-      } else if (kind === WorkloadKind.Job || kind === WorkloadKind.Cronjob) {
-        if (kind === WorkloadKind.Job) {
-          return `并发数: ${workloadConfig.spec.parallelism || 1}, 完成数: ${workloadConfig.spec.completions || 1}`;
-        }
-        return '定时任务';
-      } else {
-        return `副本数: ${workloadConfig.spec.replicas}`;
-      }
-    };
-    
     return (
-      <div style={{ height: '500px' }}>
+      <div style={{ height: '700px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
           <Title level={4} style={{ margin: 0 }}>
             <Space>
@@ -1868,352 +1854,104 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
           </Button>
         </Space>
         
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-          gap: '16px', 
-          marginBottom: '24px' 
-        }}>
-          <Card 
-            size="small" 
-            style={{ 
-              background: 'linear-gradient(135deg, #f6ffed 0%, #f6ffed 100%)',
-              border: '1px solid #b7eb8f',
-              borderRadius: '8px'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ 
-                width: '36px', 
-                height: '36px', 
-                background: '#52c41a', 
-                borderRadius: '50%', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '16px'
-              }}>
-                {getWorkloadIcon(kind)}
-              </div>
-              <div>
-                <Text strong style={{ fontSize: '14px', color: '#389e0d' }}>
-                  {getWorkloadKindLabel(kind)}
-                </Text>
-                <div style={{ fontSize: '12px', color: '#52c41a' }}>
-                  {workloadConfig.metadata.name} • {workloadConfig.metadata.namespace}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          <Card 
-            size="small" 
-            style={{ 
-              background: 'linear-gradient(135deg, #e6f7ff 0%, #e6f7ff 100%)',
-              border: '1px solid #91d5ff',
-              borderRadius: '8px'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ 
-                width: '36px', 
-                height: '36px', 
-                background: '#1890ff', 
-                borderRadius: '50%', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '16px'
-              }}>
-                📦
-              </div>
-              <div>
-                <Text strong style={{ fontSize: '14px', color: '#0050b3' }}>
-                  配置摘要
-                </Text>
-                <div style={{ fontSize: '12px', color: '#1890ff' }}>
-                  {workloadConfig.spec.containers.length} 个容器 • {getReplicasInfo()}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          <Card 
-            size="small" 
-            style={{ 
-              background: `linear-gradient(135deg, ${
-                workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) && 
-                workloadConfig.spec.imageRegistry?.enabled 
-                  ? '#f6ffed' : '#fff7e6'
-              } 0%, ${
-                workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) && 
-                workloadConfig.spec.imageRegistry?.enabled 
-                  ? '#f6ffed' : '#fff7e6'
-              } 100%)`,
-              border: `1px solid ${
-                workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) && 
-                workloadConfig.spec.imageRegistry?.enabled 
-                  ? '#b7eb8f' : '#ffd591'
-              }`,
-              borderRadius: '8px'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{ 
-                width: '36px', 
-                height: '36px', 
-                background: workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) && 
-                            workloadConfig.spec.imageRegistry?.enabled ? '#52c41a' : '#fa8c16', 
-                borderRadius: '50%', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '16px'
-              }}>
-                🔧
-              </div>
-              <div>
-                <Text strong style={{ 
-                  fontSize: '14px', 
-                  color: workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) && 
-                         workloadConfig.spec.imageRegistry?.enabled ? '#389e0d' : '#d46b08' 
-                }}>
-                  配置状态
-                </Text>
-                <div style={{ fontSize: '12px', lineHeight: '1.4' }}>
-                  <div style={{ color: '#52c41a' }}>✅ 资源配置</div>
-                  <div style={{ color: workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) ? '#52c41a' : '#fa8c16' }}>
-                    {workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) ? '✅' : '⚠️'} 健康检查
-                  </div>
-                  <div style={{ color: workloadConfig.spec.imageRegistry?.enabled ? '#52c41a' : '#8c8c8c' }}>
-                    {workloadConfig.spec.imageRegistry?.enabled ? '✅' : '○'} 镜像仓库
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        </div>
-        
-                {/* 详细配置摘要 */}
-        <Collapse 
-          ghost 
-          style={{ 
-            background: '#fafafa', 
-            border: '1px solid #e8e8e8', 
-            borderRadius: '8px',
-            marginBottom: '20px'
-          }}
+        {/* 基本信息 */}
+        <Card 
+          title={
+            <Space>
+              <span style={{ fontSize: '16px' }}>🏷️</span>
+              <Text strong>基本信息</Text>
+            </Space>
+          }
+          size="small" 
+          style={{ marginBottom: 12, flexShrink: 0 }}
         >
-          <Panel 
-            header={
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '16px' }}>📋</span>
-                <Text strong style={{ fontSize: '15px' }}>配置详情</Text>
-                <Badge 
-                  count={workloadConfig.spec.containers.length} 
-                  style={{ backgroundColor: '#1890ff' }}
-                  title="容器数量"
-                />
+          <Row gutter={16}>
+            <Col span={6}>
+              <Text type="secondary">类型:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Text strong style={{ color: '#1890ff' }}>{getWorkloadKindLabel(kind)}</Text>
               </div>
-            } 
-            key="config-details"
-          >
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-              gap: '20px',
-              padding: '16px 0'
-            }}>
-              <Card size="small" style={{ background: '#f9f9f9', border: '1px solid #e8e8e8' }}>
-                <div style={{ marginBottom: 8 }}>
-                  <Text strong style={{ color: '#1890ff', fontSize: '13px' }}>🏷️ 基本信息</Text>
-                </div>
-                <div style={{ fontSize: '12px', lineHeight: '1.6' }}>
-                  <div style={{ marginBottom: 4 }}>
-                    <Text type="secondary">类型:</Text> <Text style={{ color: '#1890ff' }}>{getWorkloadKindLabel(kind)}</Text>
-                  </div>
-                  <div style={{ marginBottom: 4 }}>
-                    <Text type="secondary">名称:</Text> <Text code>{workloadConfig.metadata.name}</Text>
-                  </div>
-                  <div style={{ marginBottom: 4 }}>
-                    <Text type="secondary">命名空间:</Text> <Text code>{workloadConfig.metadata.namespace}</Text>
-                  </div>
-                  {kind !== WorkloadKind.Job && kind !== WorkloadKind.Cronjob && (
-                    <div style={{ marginBottom: 4 }}>
-                      <Text type="secondary">副本数:</Text> <Text style={{ color: '#52c41a' }}>{workloadConfig.spec.replicas}</Text>
-                    </div>
-                  )}
-                  {kind === WorkloadKind.Cronjob && (
-                    <div style={{ marginBottom: 4 }}>
-                      <Text type="secondary">调度:</Text> <Text code>{workloadConfig.spec.schedule}</Text>
-                    </div>
-                  )}
-                </div>
-              </Card>
+            </Col>
+            <Col span={6}>
+              <Text type="secondary">名称:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Text code>{workloadConfig.metadata.name}</Text>
+              </div>
+            </Col>
+            <Col span={6}>
+              <Text type="secondary">命名空间:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Text code>{workloadConfig.metadata.namespace}</Text>
+              </div>
+            </Col>
+            <Col span={6}>
+              <Text type="secondary">副本数:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Text strong style={{ color: '#52c41a' }}>{workloadConfig.spec.replicas}</Text>
+              </div>
+            </Col>
+          </Row>
+        </Card>
 
-              <Card size="small" style={{ background: '#f9f9f9', border: '1px solid #e8e8e8' }}>
-                <div style={{ marginBottom: 8 }}>
-                  <Text strong style={{ color: '#52c41a', fontSize: '13px' }}>🐳 容器配置</Text>
-                </div>
-                <div style={{ fontSize: '12px', lineHeight: '1.6' }}>
-                  {workloadConfig.spec.containers.map((container, index) => (
-                    <div key={index} style={{ 
-                      marginBottom: 8,
-                      padding: '6px 8px',
-                      background: '#ffffff',
-                      borderRadius: '4px',
-                      border: '1px solid #e8e8e8'
-                    }}>
-                      <div style={{ marginBottom: 2 }}>
-                        <Text style={{ fontWeight: 500, color: '#1890ff' }}>{container.name}</Text>
-                      </div>
-                      <div style={{ marginBottom: 2 }}>
-                        <Text type="secondary" style={{ fontSize: '11px' }}>镜像:</Text> 
-                        <Text code style={{ fontSize: '11px', marginLeft: 4 }}>{container.image}</Text>
-                      </div>
-                      {container.ports.length > 0 && (
-                        <div>
-                          <Text type="secondary" style={{ fontSize: '11px' }}>端口:</Text>
-                          <Text style={{ fontSize: '11px', marginLeft: 4, color: '#fa8c16' }}>
-                            {container.ports.map(p => p.containerPort).join(', ')}
-                          </Text>
-                        </div>
-                      )}
+        {/* 容器配置 */}
+        <Card 
+          title={
+            <Space>
+              <span style={{ fontSize: '16px' }}>🐳</span>
+              <Text strong>容器配置</Text>
+              <Badge count={workloadConfig.spec.containers.length} style={{ backgroundColor: '#1890ff' }} />
+            </Space>
+          }
+          size="small" 
+          style={{ marginBottom: 12, flexShrink: 0 }}
+        >
+          <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
+            {workloadConfig.spec.containers.map((container, index) => (
+              <div key={index} style={{ 
+                marginBottom: 8,
+                padding: '8px',
+                background: '#f9f9f9',
+                borderRadius: '4px',
+                border: '1px solid #e8e8e8'
+              }}>
+                <Row gutter={16}>
+                  <Col span={6}>
+                    <Text type="secondary">容器名:</Text>
+                    <div><Text strong>{container.name}</Text></div>
+                  </Col>
+                  <Col span={10}>
+                    <Text type="secondary">镜像:</Text>
+                    <div><Text code style={{ fontSize: '12px' }}>{container.image}</Text></div>
+                  </Col>
+                  <Col span={4}>
+                    <Text type="secondary">资源:</Text>
+                    <div style={{ fontSize: '12px' }}>
+                      <div>CPU: {container.resources.requests.cpu}</div>
+                      <div>内存: {container.resources.requests.memory}</div>
                     </div>
-                  ))}
-                </div>
-              </Card>
+                  </Col>
+                  <Col span={4}>
+                    <Text type="secondary">端口:</Text>
+                    <div style={{ fontSize: '12px' }}>
+                      {container.ports.length > 0 ? 
+                        container.ports.map(p => p.containerPort).join(', ') : 
+                        <Text type="secondary">无</Text>
+                      }
+                    </div>
+                  </Col>
+                </Row>
+              </div>
+            ))}
+          </div>
+        </Card>
 
-              <Card size="small" style={{ background: '#f9f9f9', border: '1px solid #e8e8e8' }}>
-                <div style={{ marginBottom: 8 }}>
-                  <Text strong style={{ color: '#fa8c16', fontSize: '13px' }}>⚙️ 高级配置</Text>
-                </div>
-                <div style={{ fontSize: '12px', lineHeight: '1.8' }}>
-                  {Object.keys(workloadConfig.metadata.labels || {}).length > 0 && (
-                    <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ color: '#52c41a' }}>✓</span>
-                      <Text type="secondary">标签:</Text> 
-                      <Badge count={Object.keys(workloadConfig.metadata.labels).length} size="small" />
-                    </div>
-                  )}
-                  {Object.keys(workloadConfig.metadata.annotations || {}).length > 0 && (
-                    <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ color: '#52c41a' }}>✓</span>
-                      <Text type="secondary">注解:</Text> 
-                      <Badge count={Object.keys(workloadConfig.metadata.annotations).length} size="small" />
-                    </div>
-                  )}
-                  {workloadConfig.spec.nodeSelector && Object.keys(workloadConfig.spec.nodeSelector).length > 0 && (
-                    <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ color: '#52c41a' }}>✓</span>
-                      <Text type="secondary">节点选择器:</Text> 
-                      <Badge count={Object.keys(workloadConfig.spec.nodeSelector).length} size="small" />
-                    </div>
-                  )}
-                  {workloadConfig.spec.containers.some(c => c.livenessProbe?.enabled || c.readinessProbe?.enabled) ? (
-                    <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ color: '#52c41a' }}>✓</span>
-                      <Text type="secondary">健康检查:</Text> 
-                      <Text style={{ color: '#52c41a' }}>已配置</Text>
-                    </div>
-                  ) : (
-                    <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ color: '#d9d9d9' }}>○</span>
-                      <Text type="secondary">健康检查:</Text> 
-                      <Text type="secondary">未配置</Text>
-                    </div>
-                  )}
-                  {workloadConfig.spec.imageRegistry?.enabled ? (
-                    <>
-                      <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ color: '#52c41a' }}>✓</span>
-                        <Text type="secondary">镜像仓库:</Text> 
-                        <Text code style={{ fontSize: '11px' }}>{workloadConfig.spec.imageRegistry.registry || '未设置'}</Text>
-                      </div>
-                      {workloadConfig.spec.imageRegistry?.secretName && (
-                        <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ color: '#52c41a' }}>✓</span>
-                          <Text type="secondary">拉取密钥:</Text> 
-                          <Text code style={{ fontSize: '11px' }}>{workloadConfig.spec.imageRegistry.secretName}</Text>
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ color: '#d9d9d9' }}>○</span>
-                      <Text type="secondary">镜像仓库:</Text> 
-                      <Text type="secondary">未启用</Text>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            </div>
-          </Panel>
-        </Collapse>
-        
-        {/* 配置验证警告 */}
-        {(() => {
-          const warnings = [];
-          
-          // 检查镜像仓库配置
-          if (workloadConfig.spec.imageRegistry?.enabled && !workloadConfig.spec.imageRegistry.registry) {
-            warnings.push('镜像仓库已启用但未设置仓库地址');
-          }
-          
-          // 检查镜像是否包含仓库前缀
-          if (workloadConfig.spec.imageRegistry?.enabled && workloadConfig.spec.imageRegistry.registry) {
-            const registryMismatch = workloadConfig.spec.containers.some(c => 
-              c.image && !c.image.startsWith(workloadConfig.spec.imageRegistry!.registry!)
-            );
-            if (registryMismatch) {
-              warnings.push('部分容器镜像未使用配置的镜像仓库前缀');
-            }
-          }
-          
-          // 检查健康检查
-          const noHealthCheck = !workloadConfig.spec.containers.some(c => 
-            c.livenessProbe?.enabled || c.readinessProbe?.enabled
-          );
-          if (noHealthCheck && kind !== WorkloadKind.Job && kind !== WorkloadKind.Cronjob) {
-            warnings.push('建议为长期运行的工作负载配置健康检查');
-          }
-          
-          return warnings.length > 0 && (
-            <Alert
-              message="⚠️ 配置建议"
-              description={
-                <ul style={{ 
-                  margin: '4px 0', 
-                  paddingLeft: '20px',
-                  fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif'
-                }}>
-                  {warnings.map((warning, index) => (
-                    <li key={index} style={{ fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif' }}>
-                      {warning}
-                    </li>
-                  ))}
-                </ul>
-              }
-              type="warning"
-              showIcon
-              style={{ 
-                marginBottom: 16,
-                fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif'
-              }}
-            />
-          );
-        })()}
-
-                <Card 
+        {/* YAML配置 */}
+        <Card 
           title={
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Space>
                 <span style={{ fontSize: '16px' }}>📄</span>
                 <Text strong>YAML 配置</Text>
-                <Badge count="预览" style={{ backgroundColor: '#1890ff' }} />
               </Space>
               <Space>
                 <Button
@@ -2248,17 +1986,20 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
             </div>
           }
           size="small"
-          style={{ background: '#fafafa', border: '1px solid #e8e8e8' }}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+          bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '12px' }}
         >
           <div style={{ 
             background: '#1f1f1f',
             borderRadius: '6px',
             border: '1px solid #333',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column'
           }}>
             <TextArea
               value={yamlContent}
-              rows={14}
               readOnly
               style={{ 
                 fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif',
@@ -2268,20 +2009,11 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
                 color: '#e6e6e6',
                 border: 'none',
                 padding: '16px',
-                resize: 'none'
+                resize: 'none',
+                flex: 1,
+                minHeight: '300px'
               }}
             />
-          </div>
-          <div style={{ 
-            marginTop: '12px', 
-            padding: '8px 12px', 
-            background: '#f0f0f0',
-            borderRadius: '4px',
-            fontSize: '12px',
-            color: '#666',
-            fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif'
-          }}>
-            💡 提示: 此YAML将被创建为Kubernetes资源，请仔细检查配置
           </div>
         </Card>
       </div>
