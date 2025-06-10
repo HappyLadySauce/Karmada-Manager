@@ -33,6 +33,8 @@ import {
   Switch,
   InputNumber,
   Radio,
+  Card,
+  Tag,
 } from 'antd';
 import { 
   PlusOutlined, 
@@ -347,22 +349,34 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
           replicaScheduling: (() => {
             const replicaScheduling = { ...config.spec.placement.replicaScheduling };
             
-            // 如果是加权分发但没有配置权重，自动为所有集群设置相等权重
+            // 如果是加权分发，确保所有集群都有权重配置
             if (
               replicaScheduling.replicaDivisionPreference === 'Weighted' &&
               replicaScheduling.replicaSchedulingType === 'Divided' &&
               config.spec.placement.clusters &&
               config.spec.placement.clusters.length > 0
             ) {
-              if (!replicaScheduling.weightPreference?.staticWeightList || 
-                  replicaScheduling.weightPreference.staticWeightList.length === 0) {
-                replicaScheduling.weightPreference = {
-                  staticWeightList: config.spec.placement.clusters.map(cluster => ({
-                    targetCluster: { clusterNames: [cluster] },
-                    weight: 1
-                  }))
-                };
-              }
+              const existingWeights = replicaScheduling.weightPreference?.staticWeightList || [];
+              const newWeights: Array<{
+                targetCluster: { clusterNames: string[] };
+                weight: number;
+              }> = [];
+              
+              // 为每个集群确保有权重配置
+              config.spec.placement.clusters.forEach(cluster => {
+                const existingWeight = existingWeights.find(w => 
+                  w.targetCluster.clusterNames?.includes(cluster)
+                );
+                
+                newWeights.push({
+                  targetCluster: { clusterNames: [cluster] },
+                  weight: existingWeight?.weight || 1
+                });
+              });
+              
+              replicaScheduling.weightPreference = {
+                staticWeightList: newWeights
+              };
             }
             
             return replicaScheduling;
@@ -1129,6 +1143,32 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
             value={policyConfig.spec.placement.clusters || []}
             onChange={(value) => {
               updatePolicyConfig('spec.placement.clusters', value);
+              
+              // 如果是加权分发且分割模式，自动为所有集群初始化权重
+              if (policyConfig.spec.placement.replicaScheduling?.replicaDivisionPreference === 'Weighted' && 
+                  policyConfig.spec.placement.replicaScheduling?.replicaSchedulingType === 'Divided' &&
+                  value && value.length > 0) {
+                
+                const existingWeights = policyConfig.spec.placement.replicaScheduling?.weightPreference?.staticWeightList || [];
+                const newWeights: Array<{
+                  targetCluster: { clusterNames: string[] };
+                  weight: number;
+                }> = [];
+                
+                // 为每个集群确保有权重配置
+                value.forEach(cluster => {
+                  const existingWeight = existingWeights.find(w => 
+                    w.targetCluster.clusterNames?.includes(cluster)
+                  );
+                  
+                  newWeights.push({
+                    targetCluster: { clusterNames: [cluster] },
+                    weight: existingWeight?.weight || 1
+                  });
+                });
+                
+                updatePolicyConfig('spec.placement.replicaScheduling.weightPreference.staticWeightList', newWeights);
+              }
             }}
             loading={isClusterDataLoading}
             showSearch
@@ -1182,7 +1222,36 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
               <Radio.Group
                 size="small"
                 value={policyConfig.spec.placement.replicaScheduling?.replicaDivisionPreference || 'Aggregated'}
-                onChange={(e) => updatePolicyConfig('spec.placement.replicaScheduling.replicaDivisionPreference', e.target.value)}
+                onChange={(e) => {
+                  updatePolicyConfig('spec.placement.replicaScheduling.replicaDivisionPreference', e.target.value);
+                  
+                  // 如果切换到加权分发且选择了分割模式，自动为所有集群初始化权重
+                  if (e.target.value === 'Weighted' && 
+                      policyConfig.spec.placement.replicaScheduling?.replicaSchedulingType === 'Divided' &&
+                      policyConfig.spec.placement.clusters && 
+                      policyConfig.spec.placement.clusters.length > 0) {
+                    
+                    const existingWeights = policyConfig.spec.placement.replicaScheduling?.weightPreference?.staticWeightList || [];
+                    const newWeights: Array<{
+                      targetCluster: { clusterNames: string[] };
+                      weight: number;
+                    }> = [];
+                    
+                    // 为每个集群确保有权重配置
+                    policyConfig.spec.placement.clusters.forEach(cluster => {
+                      const existingWeight = existingWeights.find(w => 
+                        w.targetCluster.clusterNames?.includes(cluster)
+                      );
+                      
+                      newWeights.push({
+                        targetCluster: { clusterNames: [cluster] },
+                        weight: existingWeight?.weight || 1
+                      });
+                    });
+                    
+                    updatePolicyConfig('spec.placement.replicaScheduling.weightPreference.staticWeightList', newWeights);
+                  }
+                }}
               >
                 <Radio value="Aggregated">聚合</Radio>
                 <Radio value="Weighted">加权</Radio>
@@ -1194,7 +1263,36 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
               <Radio.Group
                 size="small"
                 value={policyConfig.spec.placement.replicaScheduling?.replicaSchedulingType || 'Duplicated'}
-                onChange={(e) => updatePolicyConfig('spec.placement.replicaScheduling.replicaSchedulingType', e.target.value)}
+                onChange={(e) => {
+                  updatePolicyConfig('spec.placement.replicaScheduling.replicaSchedulingType', e.target.value);
+                  
+                  // 如果切换到分割模式且选择了加权分发，自动为所有集群初始化权重
+                  if (e.target.value === 'Divided' && 
+                      policyConfig.spec.placement.replicaScheduling?.replicaDivisionPreference === 'Weighted' &&
+                      policyConfig.spec.placement.clusters && 
+                      policyConfig.spec.placement.clusters.length > 0) {
+                    
+                    const existingWeights = policyConfig.spec.placement.replicaScheduling?.weightPreference?.staticWeightList || [];
+                    const newWeights: Array<{
+                      targetCluster: { clusterNames: string[] };
+                      weight: number;
+                    }> = [];
+                    
+                    // 为每个集群确保有权重配置
+                    policyConfig.spec.placement.clusters.forEach(cluster => {
+                      const existingWeight = existingWeights.find(w => 
+                        w.targetCluster.clusterNames?.includes(cluster)
+                      );
+                      
+                      newWeights.push({
+                        targetCluster: { clusterNames: [cluster] },
+                        weight: existingWeight?.weight || 1
+                      });
+                    });
+                    
+                    updatePolicyConfig('spec.placement.replicaScheduling.weightPreference.staticWeightList', newWeights);
+                  }
+                }}
               >
                 <Radio value="Duplicated">复制</Radio>
                 <Radio value="Divided">分割</Radio>
@@ -1339,42 +1437,8 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
     
     const yamlContent = generateYAMLWithComments(yamlObject);
     
-    // 计算资源信息显示
-    const getResourcesInfo = () => {
-      const resourceCount = policyConfig.spec.resourceSelectors.length;
-      const clusterCount = policyConfig.spec.placement.clusters?.length || 0;
-      const resourceTypes = policyConfig.spec.resourceSelectors.map(s => s.kind).join(', ');
-      return `资源选择器: ${resourceCount} (${resourceTypes}) | 目标集群: ${clusterCount}`;
-    };
-    
-    // 获取详细配置信息
-    const getConfigDetails = () => {
-      const details = [];
-      
-      // 调度策略
-      const replicaScheduling = policyConfig.spec.placement.replicaScheduling;
-      if (replicaScheduling) {
-        const preference = replicaScheduling.replicaDivisionPreference === 'Aggregated' ? '聚合' : '加权';
-        const type = replicaScheduling.replicaSchedulingType === 'Duplicated' ? '复制' : '分割';
-        details.push(`调度策略: ${preference}/${type}`);
-      }
-      
-      // 冲突解决
-      if (policyConfig.spec.conflictResolution) {
-        const resolution = policyConfig.spec.conflictResolution === 'Abort' ? '中止' : '覆盖';
-        details.push(`冲突解决: ${resolution}`);
-      }
-      
-      // 优先级
-      if (policyConfig.spec.priority !== undefined) {
-        details.push(`优先级: ${policyConfig.spec.priority}`);
-      }
-      
-      return details.join(' | ');
-    };
-    
     return (
-      <div style={{ height: '450px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ height: '700px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
           <Title level={4} style={{ margin: 0 }}>
             <Space>
@@ -1393,26 +1457,208 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
           </Button>
         </Space>
         
-        {/* 配置验证状态 */}
-        {validation.isValid ? (
-          <Alert
-            message={`✅ 配置验证通过 - 即将创建 ${getScopeLabel(scope)}: ${policyConfig.metadata.name}`}
-            description={
-              <div>
-                <div>{scope === PolicyScope.Namespace ? `命名空间: ${policyConfig.metadata.namespace} | ` : ''}${getResourcesInfo()}</div>
-                <div style={{ 
-                  marginTop: 4, 
-                  fontSize: '12px', 
-                  color: '#666',
-                  fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif'
-                }}>{getConfigDetails()}</div>
+        {/* 基本信息 */}
+        <Card 
+          title={
+            <Space>
+              <span style={{ fontSize: '16px' }}>🏷️</span>
+              <Text strong>基本信息</Text>
+            </Space>
+          }
+          size="small" 
+          style={{ marginBottom: 12, flexShrink: 0 }}
+        >
+          <Row gutter={16}>
+            <Col span={6}>
+              <Text type="secondary">策略类型:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Text strong style={{ color: '#1890ff' }}>{getScopeLabel(scope)}</Text>
               </div>
-            }
-            type="success"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
+            </Col>
+            <Col span={6}>
+              <Text type="secondary">策略名称:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Text code>{policyConfig.metadata.name}</Text>
+              </div>
+            </Col>
+            {scope === PolicyScope.Namespace && (
+              <Col span={6}>
+                <Text type="secondary">命名空间:</Text>
+                <div style={{ marginTop: 4 }}>
+                  <Text code>{policyConfig.metadata.namespace}</Text>
+                </div>
+              </Col>
+            )}
+            <Col span={6}>
+              <Text type="secondary">配置状态:</Text>
+              <div style={{ marginTop: 4 }}>
+        {validation.isValid ? (
+                  <Text strong style={{ color: '#52c41a' }}>✅ 验证通过</Text>
+                ) : (
+                  <Text strong style={{ color: '#ff4d4f' }}>❌ 验证失败</Text>
+                )}
+              </div>
+            </Col>
+          </Row>
+          {/* 策略配置 */}
+          <Row gutter={16} style={{ marginTop: 12 }}>
+            <Col span={6}>
+              <Text type="secondary">抢占策略:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Tag color={policyConfig.spec.preemption === 'Always' ? 'orange' : 'green'}>
+                  {policyConfig.spec.preemption === 'Always' ? 'Always' : 'Never'}
+                </Tag>
+              </div>
+            </Col>
+            <Col span={6}>
+              <Text type="secondary">冲突解决:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Tag color={policyConfig.spec.conflictResolution === 'Overwrite' ? 'red' : 'blue'}>
+                  {policyConfig.spec.conflictResolution === 'Overwrite' ? 'Overwrite' : 'Abort'}
+                </Tag>
+              </div>
+            </Col>
+            <Col span={6}>
+              <Text type="secondary">优先级:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Text strong>{policyConfig.spec.priority !== undefined ? policyConfig.spec.priority : '默认'}</Text>
+              </div>
+            </Col>
+            <Col span={6}>
+              <Text type="secondary">暂停分发:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Tag color={policyConfig.spec.suspendDispatching ? 'orange' : 'green'}>
+                  {policyConfig.spec.suspendDispatching ? '是' : '否'}
+                </Tag>
+              </div>
+            </Col>
+          </Row>
+        </Card>
+
+        {/* 资源选择器配置 */}
+        <Card 
+          title={
+            <Space>
+              <span style={{ fontSize: '16px' }}>🎯</span>
+              <Text strong>资源选择器</Text>
+              <Badge count={policyConfig.spec.resourceSelectors.length} style={{ backgroundColor: '#1890ff' }} />
+            </Space>
+          }
+          size="small" 
+          style={{ marginBottom: 12, flexShrink: 0 }}
+        >
+          <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
+            {policyConfig.spec.resourceSelectors.map((selector, index) => (
+              <div key={index} style={{ 
+                marginBottom: 8,
+                padding: '8px',
+                background: '#f9f9f9',
+                borderRadius: '4px',
+                border: '1px solid #e8e8e8'
+              }}>
+                <Row gutter={16}>
+                  <Col span={6}>
+                    <Text type="secondary">资源类型:</Text>
+                    <div><Text strong>{selector.kind}</Text></div>
+                  </Col>
+                  <Col span={6}>
+                    <Text type="secondary">API版本:</Text>
+                    <div><Text code style={{ fontSize: '12px' }}>{selector.apiVersion}</Text></div>
+                  </Col>
+                  <Col span={6}>
+                    <Text type="secondary">选择模式:</Text>
+                    <div style={{ fontSize: '12px' }}>
+                      {selector.name !== undefined ? (
+                        <Tag color="blue">资源名称: {selector.name || '未指定'}</Tag>
+                      ) : (
+                        <Tag color="green">标签选择器: {selector.labelSelector ? Object.keys(selector.labelSelector).length : 0} 个条件</Tag>
+                      )}
+                    </div>
+                  </Col>
+                  <Col span={6}>
+                    <Text type="secondary">命名空间:</Text>
+                    <div style={{ fontSize: '12px' }}>
+                      <Text code>{selector.namespace || '未指定'}</Text>
+                    </div>
+                  </Col>
+                </Row>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* 调度配置 */}
+        <Card 
+          title={
+            <Space>
+              <span style={{ fontSize: '16px' }}>🌐</span>
+              <Text strong>调度配置</Text>
+              <Badge count={policyConfig.spec.placement.clusters?.length || 0} style={{ backgroundColor: '#52c41a' }} />
+            </Space>
+          }
+          size="small" 
+          style={{ marginBottom: 12, flexShrink: 0 }}
+        >
+          <Row gutter={16}>
+            <Col span={8}>
+              <Text type="secondary">目标集群:</Text>
+              <div style={{ marginTop: 4 }}>
+                {policyConfig.spec.placement.clusters && policyConfig.spec.placement.clusters.length > 0 ? (
+                  <div style={{ maxHeight: '60px', overflowY: 'auto' }}>
+                    {policyConfig.spec.placement.clusters.map((cluster, index) => (
+                      <Tag key={index} color="blue" style={{ margin: '2px' }}>
+                        {cluster}
+                      </Tag>
+                    ))}
+                  </div>
         ) : (
+                  <Text type="secondary">未选择</Text>
+                )}
+              </div>
+            </Col>
+            <Col span={8}>
+              <Text type="secondary">分发偏好:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Tag color={policyConfig.spec.placement.replicaScheduling?.replicaDivisionPreference === 'Weighted' ? 'orange' : 'green'}>
+                  {policyConfig.spec.placement.replicaScheduling?.replicaDivisionPreference === 'Weighted' ? '加权分发' : '聚合分发'}
+                </Tag>
+              </div>
+            </Col>
+            <Col span={8}>
+              <Text type="secondary">调度类型:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Tag color={policyConfig.spec.placement.replicaScheduling?.replicaSchedulingType === 'Divided' ? 'purple' : 'cyan'}>
+                  {policyConfig.spec.placement.replicaScheduling?.replicaSchedulingType === 'Divided' ? '分割部署' : '复制部署'}
+                </Tag>
+              </div>
+            </Col>
+          </Row>
+          {/* 故障转移配置 */}
+          {(policyConfig.spec.failover?.application?.decisionConditions?.tolerationSeconds || 
+            policyConfig.spec.failover?.application?.gracePeriodSeconds) && (
+            <Row gutter={16} style={{ marginTop: 12 }}>
+              <Col span={12}>
+                <Text type="secondary">容忍时间:</Text>
+                <div style={{ marginTop: 4 }}>
+                  <Text strong>
+                    {policyConfig.spec.failover?.application?.decisionConditions?.tolerationSeconds || '未设置'} 秒
+                  </Text>
+                </div>
+              </Col>
+              <Col span={12}>
+                <Text type="secondary">优雅期限:</Text>
+                <div style={{ marginTop: 4 }}>
+                  <Text strong>
+                    {policyConfig.spec.failover?.application?.gracePeriodSeconds || '未设置'} 秒
+                  </Text>
+                </div>
+              </Col>
+            </Row>
+          )}
+        </Card>
+
+        {/* 配置验证状态 */}
+        {!validation.isValid && (
           <Alert
             message="❌ 配置验证失败"
             description={
@@ -1433,27 +1679,81 @@ const PropagationPolicyWizardModal: React.FC<PropagationPolicyWizardModalProps> 
             }
             type="error"
             showIcon
-            style={{ marginBottom: 16 }}
+            style={{ marginBottom: 12, flexShrink: 0 }}
           />
         )}
         
-        
-        <div style={{ flex: 1, overflow: 'auto', border: '1px solid #d9d9d9', borderRadius: '6px' }}>
+        {/* YAML配置 */}
+        <Card 
+          title={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Space>
+                <span style={{ fontSize: '16px' }}>📄</span>
+                <Text strong>YAML 配置</Text>
+              </Space>
+              <Space>
+                <Button
+                  size="small"
+                  icon={<span style={{ fontSize: '12px' }}>📋</span>}
+                  onClick={() => {
+                    navigator.clipboard.writeText(yamlContent);
+                    message.success('YAML 已复制到剪贴板');
+                  }}
+                >
+                  复制
+                </Button>
+                <Button
+                  size="small"
+                  icon={<span style={{ fontSize: '12px' }}>💾</span>}
+                  onClick={() => {
+                    const blob = new Blob([yamlContent], { type: 'text/yaml' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${policyConfig.metadata.name}-${scope === PolicyScope.Namespace ? 'propagationpolicy' : 'clusterpropagationpolicy'}.yaml`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    message.success('YAML 文件已下载');
+                  }}
+                >
+                  下载
+                </Button>
+              </Space>
+            </div>
+          }
+          size="small"
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+          bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '12px' }}
+        >
+          <div style={{ 
+            background: '#1f1f1f',
+            borderRadius: '6px',
+            border: '1px solid #333',
+            overflow: 'hidden',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
           <TextArea
             value={yamlContent}
             readOnly
             style={{ 
               fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif',
-              fontSize: '12px',
-              lineHeight: '1.5',
-              backgroundColor: '#f6f8fa',
-              height: '100%',
-              resize: 'none',
+                fontSize: '13px',
+                lineHeight: '1.6',
+                backgroundColor: '#1f1f1f',
+                color: '#e6e6e6',
               border: 'none',
-              borderRadius: '6px'
+                padding: '16px',
+                resize: 'none',
+                flex: 1,
+                minHeight: '300px'
             }}
           />
         </div>
+        </Card>
       </div>
     );
   };

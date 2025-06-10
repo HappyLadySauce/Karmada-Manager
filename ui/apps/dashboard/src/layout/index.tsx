@@ -23,6 +23,7 @@ import { cn } from '@/utils/cn.ts';
 import { useAuth } from '@/components/auth';
 import { getSidebarWidth } from '@/utils/i18n';
 import { useWindowSize } from "@uidotdev/usehooks";
+import PageLoadingGuard from '@/components/loading/PageLoadingGuard';
 
 const { Sider: AntdSider, Content: AntdContent } = AntdLayout;
 
@@ -49,7 +50,9 @@ export const MainLayout: FC = () => {
           <Sidebar collapsed={isSmallScreen} />
         </AntdSider>
         <AntdContent >
-          <Outlet />
+          <PageLoadingGuard>
+            <Outlet />
+          </PageLoadingGuard>
         </AntdContent>
       </AntdLayout>
     </>

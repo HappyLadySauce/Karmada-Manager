@@ -32,11 +32,11 @@ import {
   Alert,
   Collapse,
   Badge,
+  Tag,
 } from 'antd';
 import { 
   PlusOutlined, 
   DeleteOutlined, 
-  InfoCircleOutlined,
   CheckCircleOutlined,
   SettingOutlined,
   CloudOutlined,
@@ -44,14 +44,12 @@ import {
   GlobalOutlined,
   LinkOutlined,
 } from '@ant-design/icons';
-import i18nInstance from '@/utils/i18n';
 import { CreateResource } from '@/services/unstructured';
 import { IResponse, ServiceKind } from '@/services/base';
 import { ServiceType, Protocol } from '@/services/service';
 import { stringify } from 'yaml';
 import useNamespace from '@/hooks/use-namespace';
 
-const { Step } = Steps;
 const { Option } = Select;
 const { TextArea } = Input;
 const { Text, Title } = Typography;
@@ -169,6 +167,121 @@ const ServiceWizardModal: React.FC<ServiceWizardModalProps> = ({
     return icons[kind] || <CloudOutlined />;
   };
 
+  // Service选择器配置组件
+  const renderServiceSelectorConfig = () => (
+    <Card 
+      title={
+        <Space>
+          <ApiOutlined />
+          <Text>工作负载绑定</Text>
+          <Badge 
+            count={Object.keys(serviceConfig.spec.selector).length} 
+            size="small" 
+            style={{ backgroundColor: Object.keys(serviceConfig.spec.selector).length > 0 ? '#52c41a' : '#ff4d4f' }}
+          />
+        </Space>
+      } 
+      size="small" 
+      style={{ marginBottom: 16 }}
+    >
+      <Alert
+        message="重要提示"
+        description="Service需要通过选择器(selector)来匹配后端Pod，确保Service能正确路由流量到工作负载"
+        type="warning"
+        showIcon
+        style={{ marginBottom: 16 }}
+      />
+      
+      <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }}>
+        <Space>
+          <Button
+            type="dashed"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              const key = 'app';
+              updateServiceConfig(`spec.selector.${key}`, serviceConfig.metadata.name);
+            }}
+            size="small"
+          >
+            添加选择器
+          </Button>
+          <Button
+            type="link"
+            size="small"
+            onClick={() => {
+              // 设置常用的选择器模板
+              updateServiceConfig('spec.selector', { 
+                app: serviceConfig.metadata.name,
+                component: 'backend'
+              });
+            }}
+          >
+            使用模板
+          </Button>
+        </Space>
+        <Text type="secondary" style={{ fontSize: '12px' }}>
+          常用格式: app=服务名, component=组件名
+        </Text>
+      </Space>
+
+      {Object.keys(serviceConfig.spec.selector).length === 0 && (
+        <Alert
+          message="未配置选择器"
+          description="当前Service没有配置选择器，将无法绑定到任何工作负载。请添加至少一个选择器来匹配目标Pod。"
+          type="error"
+          showIcon
+          style={{ marginBottom: 12 }}
+        />
+      )}
+
+      {Object.entries(serviceConfig.spec.selector).map(([key, value]) => (
+        <Row key={key} gutter={8} style={{ marginBottom: 8 }}>
+          <Col span={10}>
+            <Input
+              placeholder="选择器键 (如: app)"
+              value={key}
+              onChange={(e) => {
+                const newConfig = { ...serviceConfig };
+                delete newConfig.spec.selector[key];
+                newConfig.spec.selector[e.target.value] = value;
+                setServiceConfig(newConfig);
+              }}
+            />
+          </Col>
+          <Col span={10}>
+            <Input
+              placeholder="选择器值 (如: nginx)"
+              value={value}
+              onChange={(e) => updateServiceConfig(`spec.selector.${key}`, e.target.value)}
+            />
+          </Col>
+          <Col span={4}>
+            <Button
+              type="text"
+              danger
+              size="small"
+              icon={<DeleteOutlined />}
+              onClick={() => {
+                const newConfig = { ...serviceConfig };
+                delete newConfig.spec.selector[key];
+                setServiceConfig(newConfig);
+              }}
+            />
+          </Col>
+        </Row>
+      ))}
+
+      <div style={{ marginTop: 12, padding: '8px 12px', backgroundColor: '#f6f8fa', borderRadius: '4px', border: '1px solid #d0d7de' }}>
+        <Text type="secondary" style={{ fontSize: '12px' }}>
+          💡 <strong>绑定说明:</strong> 选择器会匹配具有相同标签的Pod。例如，如果您的Deployment的Pod标签是 
+          <code style={{ margin: '0 4px' }}>app: nginx</code>，
+          那么Service的选择器应该设置为 
+          <code style={{ margin: '0 4px' }}>app: nginx</code>
+        </Text>
+      </div>
+    </Card>
+  );
+
   // 重置配置到默认值
   useEffect(() => {
     if (open) {
@@ -205,7 +318,6 @@ const ServiceWizardModal: React.FC<ServiceWizardModalProps> = ({
   }, [open, kind]);
 
   const generateYAML = (config: ServiceConfig) => {
-    const kindLabel = getServiceKindLabel(kind);
     let apiVersion = 'v1';
     
     if (kind === ServiceKind.Ingress) {
@@ -290,6 +402,15 @@ const ServiceWizardModal: React.FC<ServiceWizardModalProps> = ({
   const handleNext = async () => {
     try {
       await form.validateFields();
+      
+      // 在第一步验证Service选择器
+      if (currentStep === 0 && kind === ServiceKind.Service) {
+        if (Object.keys(serviceConfig.spec.selector).length === 0) {
+          message.error('请在"工作负载绑定"部分添加至少一个选择器来匹配目标Pod');
+          return;
+        }
+      }
+      
       if (currentStep < 3) {
         setCurrentStep(currentStep + 1);
       } else {
@@ -527,6 +648,9 @@ const ServiceWizardModal: React.FC<ServiceWizardModalProps> = ({
 
         {/* 服务特定配置 */}
         {renderServiceSpecificConfig()}
+
+        {/* Service 选择器配置 - 移到基本配置步骤 */}
+        {kind === ServiceKind.Service && renderServiceSelectorConfig()}
       </Form>
     </div>
   );
@@ -851,65 +975,6 @@ const ServiceWizardModal: React.FC<ServiceWizardModalProps> = ({
 
   const renderAdvancedConfig = () => (
     <div style={{ maxHeight: '500px', overflowY: 'auto', padding: '0 8px' }}>
-      {kind === ServiceKind.Service && (
-        <Card title="选择器配置" size="small" style={{ marginBottom: 16 }}>
-          <Alert
-            message="选择器用于匹配Pod标签，确定Service后端"
-            type="info"
-            showIcon
-            style={{ marginBottom: 16 }}
-          />
-          
-          <Button
-            type="dashed"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              const key = `app`;
-              updateServiceConfig(`spec.selector.${key}`, serviceConfig.metadata.name);
-            }}
-            style={{ marginBottom: 8 }}
-            size="small"
-          >
-            添加选择器
-          </Button>
-          {Object.entries(serviceConfig.spec.selector).map(([key, value]) => (
-            <Row key={key} gutter={8} style={{ marginBottom: 8 }}>
-              <Col span={10}>
-                <Input
-                  placeholder="选择器键"
-                  value={key}
-                  onChange={(e) => {
-                    const newConfig = { ...serviceConfig };
-                    delete newConfig.spec.selector[key];
-                    newConfig.spec.selector[e.target.value] = value;
-                    setServiceConfig(newConfig);
-                  }}
-                />
-              </Col>
-              <Col span={10}>
-                <Input
-                  placeholder="选择器值"
-                  value={value}
-                  onChange={(e) => updateServiceConfig(`spec.selector.${key}`, e.target.value)}
-                />
-              </Col>
-              <Col span={4}>
-                <Button
-                  type="text"
-                  danger
-                  size="small"
-                  icon={<DeleteOutlined />}
-                  onClick={() => {
-                    const newConfig = { ...serviceConfig };
-                    delete newConfig.spec.selector[key];
-                    setServiceConfig(newConfig);
-                  }}
-                />
-              </Col>
-            </Row>
-          ))}
-        </Card>
-      )}
 
       <Card title="标签和注解" size="small" style={{ marginBottom: 16 }}>
         <Collapse ghost>
@@ -1025,21 +1090,17 @@ const ServiceWizardModal: React.FC<ServiceWizardModalProps> = ({
     const yamlObject = generateYAML(serviceConfig);
     const yamlContent = stringify(yamlObject);
     
-    // 计算端口信息显示
-    const getPortsInfo = () => {
-      if (kind === ServiceKind.Service) {
-        return `端口数: ${serviceConfig.spec.ports.length} | 类型: ${serviceConfig.spec.type}`;
-      } else {
-        return `规则数: ${serviceConfig.spec.rules.length} | 类: ${serviceConfig.spec.ingressClassName || '未设置'}`;
-      }
-    };
+    // 检查配置有效性
+    const hasSelector = kind === ServiceKind.Service && Object.keys(serviceConfig.spec.selector).length > 0;
+    const hasValidIngress = kind === ServiceKind.Ingress && serviceConfig.spec.rules.some(rule => rule.serviceName);
+    const isConfigValid = kind === ServiceKind.Service ? hasSelector : hasValidIngress;
     
     return (
-      <div style={{ height: '500px' }}>
+      <div style={{ height: '700px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }}>
           <Title level={4} style={{ margin: 0 }}>
             <Space>
-              <CheckCircleOutlined style={{ color: '#52c41a' }} />
+              <CheckCircleOutlined style={{ color: isConfigValid ? '#52c41a' : '#ff4d4f' }} />
               配置预览
             </Space>
           </Title>
@@ -1054,25 +1115,303 @@ const ServiceWizardModal: React.FC<ServiceWizardModalProps> = ({
           </Button>
         </Space>
         
-        <Alert
-          message={`即将创建 ${getServiceKindLabel(kind)}: ${serviceConfig.metadata.name}`}
-          description={`命名空间: ${serviceConfig.metadata.namespace} | ${getPortsInfo()}`}
-          type="success"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-        
-        <TextArea
-          value={yamlContent}
-          rows={18}
-          readOnly
-          style={{ 
-            fontFamily: '"Microsoft YaHei", "微软雅黑", "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", Arial, sans-serif',
-            fontSize: '13px',
-            lineHeight: '1.4',
-            backgroundColor: '#f6f8fa',
-          }}
-        />
+        {/* 基本信息 */}
+        <Card 
+          title={
+            <Space>
+              <span style={{ fontSize: '16px' }}>🏷️</span>
+              <Text strong>基本信息</Text>
+            </Space>
+          }
+          size="small" 
+          style={{ marginBottom: 12, flexShrink: 0 }}
+        >
+          <Row gutter={16}>
+            <Col span={6}>
+              <Text type="secondary">服务类型:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Text strong style={{ color: '#1890ff' }}>{getServiceKindLabel(kind)}</Text>
+              </div>
+            </Col>
+            <Col span={6}>
+              <Text type="secondary">服务名称:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Text code>{serviceConfig.metadata.name}</Text>
+              </div>
+            </Col>
+            <Col span={6}>
+              <Text type="secondary">命名空间:</Text>
+              <div style={{ marginTop: 4 }}>
+                <Text code>{serviceConfig.metadata.namespace}</Text>
+              </div>
+            </Col>
+            <Col span={6}>
+              <Text type="secondary">配置状态:</Text>
+              <div style={{ marginTop: 4 }}>
+                {isConfigValid ? (
+                  <Text strong style={{ color: '#52c41a' }}>✅ 验证通过</Text>
+                ) : (
+                  <Text strong style={{ color: '#ff4d4f' }}>❌ 验证失败</Text>
+                )}
+              </div>
+            </Col>
+          </Row>
+          {/* 服务特定配置 */}
+          {kind === ServiceKind.Service && (
+            <Row gutter={16} style={{ marginTop: 12 }}>
+              <Col span={6}>
+                <Text type="secondary">服务类型:</Text>
+                <div style={{ marginTop: 4 }}>
+                  <Tag color="blue">{serviceConfig.spec.type}</Tag>
+                </div>
+              </Col>
+              <Col span={6}>
+                <Text type="secondary">会话亲和性:</Text>
+                <div style={{ marginTop: 4 }}>
+                  <Tag color={serviceConfig.spec.sessionAffinity === 'ClientIP' ? 'orange' : 'green'}>
+                    {serviceConfig.spec.sessionAffinity || 'None'}
+                  </Tag>
+                </div>
+              </Col>
+              {(serviceConfig.spec.type === ServiceType.NodePort || 
+                serviceConfig.spec.type === ServiceType.LoadBalancer) && (
+                <Col span={6}>
+                  <Text type="secondary">外部流量策略:</Text>
+                  <div style={{ marginTop: 4 }}>
+                    <Tag color={serviceConfig.spec.externalTrafficPolicy === 'Local' ? 'purple' : 'cyan'}>
+                      {serviceConfig.spec.externalTrafficPolicy || 'Cluster'}
+                    </Tag>
+                  </div>
+                </Col>
+              )}
+              <Col span={6}>
+                <Text type="secondary">选择器:</Text>
+                <div style={{ marginTop: 4 }}>
+                  <Badge 
+                    count={Object.keys(serviceConfig.spec.selector).length} 
+                    style={{ backgroundColor: Object.keys(serviceConfig.spec.selector).length > 0 ? '#52c41a' : '#ff4d4f' }}
+                  />
+                  <Text style={{ marginLeft: 8 }}>
+                    {Object.keys(serviceConfig.spec.selector).length > 0 ? '已配置' : '未配置'}
+                  </Text>
+                </div>
+              </Col>
+            </Row>
+          )}
+          {kind === ServiceKind.Ingress && (
+            <Row gutter={16} style={{ marginTop: 12 }}>
+              <Col span={8}>
+                <Text type="secondary">Ingress类:</Text>
+                <div style={{ marginTop: 4 }}>
+                  <Text code>{serviceConfig.spec.ingressClassName || '未设置'}</Text>
+                </div>
+              </Col>
+              <Col span={8}>
+                <Text type="secondary">TLS配置:</Text>
+                <div style={{ marginTop: 4 }}>
+                  <Tag color={serviceConfig.spec.tls && serviceConfig.spec.tls.length > 0 ? 'green' : 'default'}>
+                    {serviceConfig.spec.tls && serviceConfig.spec.tls.length > 0 ? '已启用' : '未启用'}
+                  </Tag>
+                </div>
+              </Col>
+              <Col span={8}>
+                <Text type="secondary">路由规则:</Text>
+                <div style={{ marginTop: 4 }}>
+                  <Badge count={serviceConfig.spec.rules.length} style={{ backgroundColor: '#1890ff' }} />
+                  <Text style={{ marginLeft: 8 }}>条规则</Text>
+                </div>
+              </Col>
+            </Row>
+          )}
+        </Card>
+
+        {/* 端口/路由配置 */}
+        <Card 
+          title={
+            <Space>
+              <span style={{ fontSize: '16px' }}>{kind === ServiceKind.Service ? '🔌' : '🛣️'}</span>
+              <Text strong>{kind === ServiceKind.Service ? '端口配置' : '路由配置'}</Text>
+              <Badge 
+                count={kind === ServiceKind.Service ? serviceConfig.spec.ports.length : serviceConfig.spec.rules.length} 
+                style={{ backgroundColor: '#1890ff' }} 
+              />
+            </Space>
+          }
+          size="small" 
+          style={{ marginBottom: 12, flexShrink: 0 }}
+        >
+          <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
+            {kind === ServiceKind.Service ? (
+              serviceConfig.spec.ports.map((port, index) => (
+                <div key={index} style={{ 
+                  marginBottom: 8,
+                  padding: '8px',
+                  background: '#f9f9f9',
+                  borderRadius: '4px',
+                  border: '1px solid #e8e8e8'
+                }}>
+                  <Row gutter={16}>
+                    <Col span={6}>
+                      <Text type="secondary">端口名称:</Text>
+                      <div><Text strong>{port.name || `端口-${index + 1}`}</Text></div>
+                    </Col>
+                    <Col span={6}>
+                      <Text type="secondary">端口/目标端口:</Text>
+                      <div><Text code>{port.port} → {port.targetPort}</Text></div>
+                    </Col>
+                    <Col span={6}>
+                      <Text type="secondary">协议:</Text>
+                      <div><Tag color="blue">{port.protocol}</Tag></div>
+                    </Col>
+                    {serviceConfig.spec.type === ServiceType.NodePort && port.nodePort && (
+                      <Col span={6}>
+                        <Text type="secondary">NodePort:</Text>
+                        <div><Text code>{port.nodePort}</Text></div>
+                      </Col>
+                    )}
+                  </Row>
+                </div>
+              ))
+            ) : (
+              serviceConfig.spec.rules.map((rule, index) => (
+                <div key={index} style={{ 
+                  marginBottom: 8,
+                  padding: '8px',
+                  background: '#f9f9f9',
+                  borderRadius: '4px',
+                  border: '1px solid #e8e8e8'
+                }}>
+                  <Row gutter={16}>
+                    <Col span={6}>
+                      <Text type="secondary">主机名:</Text>
+                      <div><Text strong>{rule.host || '默认'}</Text></div>
+                    </Col>
+                    <Col span={6}>
+                      <Text type="secondary">路径:</Text>
+                      <div><Text code>{rule.path}</Text></div>
+                    </Col>
+                    <Col span={6}>
+                      <Text type="secondary">路径类型:</Text>
+                      <div><Tag color="green">{rule.pathType}</Tag></div>
+                    </Col>
+                    <Col span={6}>
+                      <Text type="secondary">后端服务:</Text>
+                      <div><Text code>{rule.serviceName}:{rule.servicePort}</Text></div>
+                    </Col>
+                  </Row>
+                </div>
+              ))
+            )}
+          </div>
+        </Card>
+
+        {/* Service选择器验证 */}
+        {kind === ServiceKind.Service && !hasSelector && (
+          <Alert
+            message="⚠️ 工作负载绑定缺失"
+            description={
+              <div>
+                <div style={{ marginBottom: 8 }}>
+                  当前Service没有配置选择器，将无法绑定到任何工作负载！这会导致：
+                </div>
+                <ul style={{ marginLeft: 16, marginBottom: 8 }}>
+                  <li>Service无法找到后端Pod</li>
+                  <li>流量无法正确路由</li>
+                  <li>服务不可用</li>
+                </ul>
+                <div>
+                  <strong>建议：</strong>返回第一步，在"工作负载绑定"部分添加选择器，如 <code>app: {serviceConfig.metadata.name}</code>
+                </div>
+              </div>
+            }
+            type="error"
+            showIcon
+            style={{ marginBottom: 12, flexShrink: 0 }}
+          />
+        )}
+
+        {/* Ingress验证 */}
+        {kind === ServiceKind.Ingress && !hasValidIngress && (
+          <Alert
+            message="⚠️ 路由配置不完整"
+            description="当前Ingress没有配置有效的后端服务，请确保至少有一个路由规则配置了后端服务名称。"
+            type="error"
+            showIcon
+            style={{ marginBottom: 12, flexShrink: 0 }}
+          />
+        )}
+
+        {/* YAML配置 */}
+        <Card 
+          title={
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Space>
+                <span style={{ fontSize: '16px' }}>📄</span>
+                <Text strong>YAML 配置</Text>
+              </Space>
+              <Space>
+                <Button
+                  size="small"
+                  icon={<span style={{ fontSize: '12px' }}>📋</span>}
+                  onClick={() => {
+                    navigator.clipboard.writeText(yamlContent);
+                    message.success('YAML 已复制到剪贴板');
+                  }}
+                >
+                  复制
+                </Button>
+                <Button
+                  size="small"
+                  icon={<span style={{ fontSize: '12px' }}>💾</span>}
+                  onClick={() => {
+                    const blob = new Blob([yamlContent], { type: 'text/yaml' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${serviceConfig.metadata.name}-${getServiceKindLabel(kind).toLowerCase()}.yaml`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    message.success('YAML 文件已下载');
+                  }}
+                >
+                  下载
+                </Button>
+              </Space>
+            </div>
+          }
+          size="small"
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+          bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '12px' }}
+        >
+          <div style={{ 
+            background: '#1f1f1f',
+            borderRadius: '6px',
+            border: '1px solid #333',
+            overflow: 'hidden',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            <TextArea
+              value={yamlContent}
+              readOnly
+              style={{ 
+                fontFamily: '"Microsoft YaHei", "微软雅黑", sans-serif',
+                fontSize: '13px',
+                lineHeight: '1.6',
+                backgroundColor: '#1f1f1f',
+                color: '#e6e6e6',
+                border: 'none',
+                padding: '16px',
+                resize: 'none',
+                flex: 1,
+                minHeight: '300px'
+              }}
+            />
+          </div>
+        </Card>
       </div>
     );
   };

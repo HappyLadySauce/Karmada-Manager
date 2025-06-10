@@ -30,7 +30,6 @@ import {
   Switch,
   message,
   Divider,
-  Tabs,
   Tooltip,
   Typography,
   Alert,
@@ -49,13 +48,11 @@ import {
   ScheduleOutlined,
   BugOutlined,
 } from '@ant-design/icons';
-import i18nInstance from '@/utils/i18n';
 import { CreateResource } from '@/services/unstructured';
 import { IResponse, WorkloadKind } from '@/services/base';
 import { stringify } from 'yaml';
 import useNamespace from '@/hooks/use-namespace';
 
-const { Step } = Steps;
 const { Option } = Select;
 const { TextArea } = Input;
 const { Text, Title } = Typography;
@@ -143,6 +140,17 @@ interface ImageRegistryConfig {
   secretName?: string;
 }
 
+interface DNSConfig {
+  enabled: boolean;
+  policy: 'ClusterFirst' | 'ClusterFirstWithHostNet' | 'Default' | 'None';
+  nameservers?: string[];
+  searches?: string[];
+  options?: Array<{
+    name: string;
+    value?: string;
+  }>;
+}
+
 interface WorkloadConfig {
   metadata: {
     name: string;
@@ -157,6 +165,7 @@ interface WorkloadConfig {
     schedule?: string;
     nodeSelector?: Record<string, string>;
     imageRegistry?: ImageRegistryConfig;
+    dnsConfig?: DNSConfig;
   } & WorkloadSpecificConfig;
 }
 
@@ -310,6 +319,50 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
       }),
     }));
 
+    // DNS配置生成函数
+    const generateDNSSpec = (dnsConfig?: DNSConfig) => {
+      if (!dnsConfig?.enabled) return {};
+      
+      const dnsSpec: any = {
+        dnsPolicy: dnsConfig.policy,
+      };
+
+      if (dnsConfig.policy === 'None' || (dnsConfig.nameservers?.length || dnsConfig.searches?.length || dnsConfig.options?.length)) {
+        dnsSpec.dnsConfig = {};
+        
+        if (dnsConfig.nameservers?.length) {
+          dnsSpec.dnsConfig.nameservers = dnsConfig.nameservers.filter(ns => ns.trim());
+        }
+        
+        if (dnsConfig.searches?.length) {
+          dnsSpec.dnsConfig.searches = dnsConfig.searches.filter(s => s.trim());
+        }
+        
+        if (dnsConfig.options?.length) {
+          dnsSpec.dnsConfig.options = dnsConfig.options
+            .filter(opt => opt.name.trim())
+            .map(opt => ({
+              name: opt.name,
+              ...(opt.value && { value: opt.value }),
+            }));
+        }
+      }
+      
+      return dnsSpec;
+    };
+
+    // 生成通用的Pod模板spec
+    const generatePodSpec = () => ({
+      containers: containerSpecs,
+      ...(config.spec.imageRegistry?.enabled && config.spec.imageRegistry?.secretName && {
+        imagePullSecrets: [{ name: config.spec.imageRegistry.secretName }],
+      }),
+      ...(Object.keys(config.spec.nodeSelector || {}).length > 0 && {
+        nodeSelector: config.spec.nodeSelector,
+      }),
+      ...generateDNSSpec(config.spec.dnsConfig),
+    });
+
     if (kind === WorkloadKind.Cronjob) {
       return {
         apiVersion,
@@ -337,14 +390,8 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
                   labels: { app: config.metadata.name },
                 },
                 spec: {
-                  containers: containerSpecs,
+                  ...generatePodSpec(),
                   restartPolicy: 'OnFailure',
-                  ...(config.spec.imageRegistry?.enabled && config.spec.imageRegistry?.secretName && {
-                    imagePullSecrets: [{ name: config.spec.imageRegistry.secretName }],
-                  }),
-                  ...(Object.keys(config.spec.nodeSelector || {}).length > 0 && {
-                    nodeSelector: config.spec.nodeSelector,
-                  }),
                 },
               },
             },
@@ -373,14 +420,8 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
               labels: { app: config.metadata.name },
             },
             spec: {
-              containers: containerSpecs,
+              ...generatePodSpec(),
               restartPolicy: config.spec.restartPolicy || 'Never',
-              ...(config.spec.imageRegistry?.enabled && config.spec.imageRegistry?.secretName && {
-                imagePullSecrets: [{ name: config.spec.imageRegistry.secretName }],
-              }),
-              ...(Object.keys(config.spec.nodeSelector || {}).length > 0 && {
-                nodeSelector: config.spec.nodeSelector,
-              }),
             },
           },
         },
@@ -396,15 +437,7 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
         metadata: {
           labels: { app: config.metadata.name },
         },
-        spec: {
-          containers: containerSpecs,
-          ...(config.spec.imageRegistry?.enabled && config.spec.imageRegistry?.secretName && {
-            imagePullSecrets: [{ name: config.spec.imageRegistry.secretName }],
-          }),
-          ...(Object.keys(config.spec.nodeSelector || {}).length > 0 && {
-            nodeSelector: config.spec.nodeSelector,
-          }),
-        },
+        spec: generatePodSpec(),
       },
     };
 
@@ -1721,6 +1754,347 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
         </Form.Item>
       </Card>
 
+      {/* DNS配置 */}
+      <Card title="🌐 DNS 配置" size="small" style={{ marginBottom: 16 }}>
+        <Alert
+          message="DNS配置问题解决方案"
+          description={
+            <div>
+              <p style={{ margin: '4px 0' }}>
+                <strong>遇到DNS解析错误？</strong> 如容器中出现 "host not found" 错误，您可以：
+              </p>
+              <ul style={{ paddingLeft: '20px', margin: '8px 0' }}>
+                <li>使用 <strong>Default</strong> 策略，继承宿主机DNS配置</li>
+                <li>使用 <strong>None</strong> 策略，自定义DNS服务器和搜索域</li>
+                <li>添加自定义DNS服务器（如：8.8.8.8, 114.114.114.114）</li>
+                <li>配置DNS搜索域以简化域名解析</li>
+              </ul>
+            </div>
+          }
+          type="info"
+          style={{ marginBottom: 16 }}
+        />
+
+        <Form.Item>
+          <Space>
+            <Switch
+              checked={workloadConfig.spec.dnsConfig?.enabled || false}
+              onChange={(checked) => {
+                if (checked) {
+                  updateWorkloadConfig('spec.dnsConfig', {
+                    enabled: true,
+                    policy: 'ClusterFirst',
+                    nameservers: [],
+                    searches: [],
+                    options: []
+                  });
+                } else {
+                  updateWorkloadConfig('spec.dnsConfig', { enabled: false });
+                }
+              }}
+            />
+            <Text strong>启用自定义DNS配置</Text>
+            <Tooltip title="配置Pod的DNS策略和自定义DNS设置，解决域名解析问题">
+              <InfoCircleOutlined />
+            </Tooltip>
+          </Space>
+        </Form.Item>
+
+        {workloadConfig.spec.dnsConfig?.enabled && (
+          <>
+            <Row gutter={16} style={{ marginBottom: 16 }}>
+              <Col span={12}>
+                <Form.Item label="DNS策略" required>
+                  <Select
+                    value={workloadConfig.spec.dnsConfig?.policy || 'ClusterFirst'}
+                    onChange={(value) => updateWorkloadConfig('spec.dnsConfig.policy', value)}
+                  >
+                    <Option value="ClusterFirst">ClusterFirst (集群DNS优先)</Option>
+                    <Option value="ClusterFirstWithHostNet">ClusterFirstWithHostNet (集群DNS+主机网络)</Option>
+                    <Option value="Default">Default (使用主机DNS)</Option>
+                    <Option value="None">None (完全自定义DNS)</Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                {workloadConfig.spec.dnsConfig?.policy && (
+                  <Alert
+                    message={
+                      workloadConfig.spec.dnsConfig.policy === 'ClusterFirst' ? '✅ 默认策略，适用于大多数集群内应用' :
+                      workloadConfig.spec.dnsConfig.policy === 'Default' ? '🔧 使用主机DNS，可解决外部域名解析问题' :
+                      workloadConfig.spec.dnsConfig.policy === 'None' ? '⚙️ 完全自定义，需要配置DNS服务器' :
+                      '🌐 适用于主机网络模式的Pod'
+                    }
+                    type={
+                      workloadConfig.spec.dnsConfig.policy === 'ClusterFirst' ? 'success' :
+                      workloadConfig.spec.dnsConfig.policy === 'Default' ? 'warning' : 'info'
+                    }
+                    style={{ fontSize: '12px' }}
+                  />
+                )}
+              </Col>
+            </Row>
+
+            {/* 快速DNS配置模板 */}
+            <div style={{ marginBottom: 16, padding: '12px', backgroundColor: '#f0f2f5', borderRadius: '6px' }}>
+              <Text strong style={{ marginRight: 8, display: 'block', marginBottom: 8 }}>🚀 快速配置:</Text>
+              <Space wrap>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    updateWorkloadConfig('spec.dnsConfig.policy', 'Default');
+                    updateWorkloadConfig('spec.dnsConfig.nameservers', []);
+                    updateWorkloadConfig('spec.dnsConfig.searches', []);
+                    message.success('已配置为使用主机DNS，可解决大部分外部域名解析问题');
+                  }}
+                >
+                  🔧 使用主机DNS
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    updateWorkloadConfig('spec.dnsConfig.policy', 'None');
+                    updateWorkloadConfig('spec.dnsConfig.nameservers', ['8.8.8.8', '8.8.4.4']);
+                    updateWorkloadConfig('spec.dnsConfig.searches', ['default.svc.cluster.local', 'svc.cluster.local', 'cluster.local']);
+                    message.success('已配置Google DNS服务器');
+                  }}
+                >
+                  🌐 Google DNS
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    updateWorkloadConfig('spec.dnsConfig.policy', 'None');
+                    updateWorkloadConfig('spec.dnsConfig.nameservers', ['114.114.114.114', '8.8.8.8']);
+                    updateWorkloadConfig('spec.dnsConfig.searches', ['default.svc.cluster.local', 'svc.cluster.local', 'cluster.local']);
+                    message.success('已配置114DNS+Google DNS');
+                  }}
+                >
+                  🇨🇳 国内DNS
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    updateWorkloadConfig('spec.dnsConfig.policy', 'ClusterFirst');
+                    updateWorkloadConfig('spec.dnsConfig.nameservers', ['8.8.8.8']);
+                    updateWorkloadConfig('spec.dnsConfig.searches', []);
+                    message.success('已配置集群DNS+备用DNS');
+                  }}
+                >
+                  🔄 混合配置
+                </Button>
+              </Space>
+            </div>
+
+            {/* DNS服务器配置 */}
+            {(workloadConfig.spec.dnsConfig?.policy === 'None' || 
+              (workloadConfig.spec.dnsConfig?.nameservers && workloadConfig.spec.dnsConfig.nameservers.length > 0)) && (
+              <Form.Item 
+                label={
+                  <Space>
+                    DNS服务器
+                    <Tooltip title="自定义DNS服务器列表，如：8.8.8.8, 114.114.114.114">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </Space>
+                }
+              >
+                <div style={{ marginBottom: 8 }}>
+                  <Button
+                    type="dashed"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      const currentServers = workloadConfig.spec.dnsConfig?.nameservers || [];
+                      updateWorkloadConfig('spec.dnsConfig.nameservers', [...currentServers, '']);
+                    }}
+                    size="small"
+                  >
+                    添加DNS服务器
+                  </Button>
+                </div>
+                {(workloadConfig.spec.dnsConfig?.nameservers || []).map((server, index) => (
+                  <Row key={index} gutter={8} style={{ marginBottom: 8 }}>
+                    <Col span={20}>
+                      <Input
+                        placeholder="例如: 8.8.8.8"
+                        value={server}
+                        onChange={(e) => {
+                          const newServers = [...(workloadConfig.spec.dnsConfig?.nameservers || [])];
+                          newServers[index] = e.target.value;
+                          updateWorkloadConfig('spec.dnsConfig.nameservers', newServers);
+                        }}
+                      />
+                    </Col>
+                    <Col span={4}>
+                      <Button
+                        type="text"
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        onClick={() => {
+                          const newServers = [...(workloadConfig.spec.dnsConfig?.nameservers || [])];
+                          newServers.splice(index, 1);
+                          updateWorkloadConfig('spec.dnsConfig.nameservers', newServers);
+                        }}
+                      />
+                    </Col>
+                  </Row>
+                ))}
+              </Form.Item>
+            )}
+
+            {/* DNS搜索域配置 */}
+            <Form.Item 
+              label={
+                <Space>
+                  DNS搜索域
+                  <Tooltip title="DNS搜索域列表，用于简化域名解析。例如：添加'example.com'后，'api'会自动解析为'api.example.com'">
+                    <InfoCircleOutlined />
+                  </Tooltip>
+                </Space>
+              }
+            >
+              <div style={{ marginBottom: 8 }}>
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    const currentSearches = workloadConfig.spec.dnsConfig?.searches || [];
+                    updateWorkloadConfig('spec.dnsConfig.searches', [...currentSearches, '']);
+                  }}
+                  size="small"
+                >
+                  添加搜索域
+                </Button>
+                <Text type="secondary" style={{ marginLeft: 8, fontSize: '12px' }}>
+                  可解决 "api.example.com" → "api" 的简化访问问题
+                </Text>
+              </div>
+              {(workloadConfig.spec.dnsConfig?.searches || []).map((search, index) => (
+                <Row key={index} gutter={8} style={{ marginBottom: 8 }}>
+                  <Col span={20}>
+                    <Input
+                      placeholder="例如: example.com"
+                      value={search}
+                      onChange={(e) => {
+                        const newSearches = [...(workloadConfig.spec.dnsConfig?.searches || [])];
+                        newSearches[index] = e.target.value;
+                        updateWorkloadConfig('spec.dnsConfig.searches', newSearches);
+                      }}
+                    />
+                  </Col>
+                  <Col span={4}>
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      onClick={() => {
+                        const newSearches = [...(workloadConfig.spec.dnsConfig?.searches || [])];
+                        newSearches.splice(index, 1);
+                        updateWorkloadConfig('spec.dnsConfig.searches', newSearches);
+                      }}
+                    />
+                  </Col>
+                </Row>
+              ))}
+            </Form.Item>
+
+            {/* DNS选项配置 */}
+            <Collapse ghost>
+              <Panel 
+                header={
+                  <Space>
+                    <Text>高级DNS选项</Text>
+                    <Tooltip title="DNS解析器选项，如超时时间、重试次数等">
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </Space>
+                } 
+                key="dnsOptions"
+              >
+                <div style={{ marginBottom: 8 }}>
+                  <Button
+                    type="dashed"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      const currentOptions = workloadConfig.spec.dnsConfig?.options || [];
+                      updateWorkloadConfig('spec.dnsConfig.options', [...currentOptions, { name: '', value: '' }]);
+                    }}
+                    size="small"
+                  >
+                    添加DNS选项
+                  </Button>
+                  <Text type="secondary" style={{ marginLeft: 8, fontSize: '12px' }}>
+                    常用选项：timeout:2, attempts:3, ndots:5
+                  </Text>
+                </div>
+                {(workloadConfig.spec.dnsConfig?.options || []).map((option, index) => (
+                  <Row key={index} gutter={8} style={{ marginBottom: 8 }}>
+                    <Col span={10}>
+                      <Input
+                        placeholder="选项名 (如: timeout)"
+                        value={option.name}
+                        onChange={(e) => {
+                          const newOptions = [...(workloadConfig.spec.dnsConfig?.options || [])];
+                          newOptions[index] = { ...newOptions[index], name: e.target.value };
+                          updateWorkloadConfig('spec.dnsConfig.options', newOptions);
+                        }}
+                      />
+                    </Col>
+                    <Col span={10}>
+                      <Input
+                        placeholder="选项值 (如: 2)"
+                        value={option.value || ''}
+                        onChange={(e) => {
+                          const newOptions = [...(workloadConfig.spec.dnsConfig?.options || [])];
+                          newOptions[index] = { ...newOptions[index], value: e.target.value };
+                          updateWorkloadConfig('spec.dnsConfig.options', newOptions);
+                        }}
+                      />
+                    </Col>
+                    <Col span={4}>
+                      <Button
+                        type="text"
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        onClick={() => {
+                          const newOptions = [...(workloadConfig.spec.dnsConfig?.options || [])];
+                          newOptions.splice(index, 1);
+                          updateWorkloadConfig('spec.dnsConfig.options', newOptions);
+                        }}
+                      />
+                    </Col>
+                  </Row>
+                ))}
+              </Panel>
+            </Collapse>
+
+            {/* 配置预览 */}
+            {(workloadConfig.spec.dnsConfig?.nameservers && workloadConfig.spec.dnsConfig.nameservers.length > 0) || 
+             (workloadConfig.spec.dnsConfig?.searches && workloadConfig.spec.dnsConfig.searches.length > 0) ? (
+              <Alert
+                message="📋 当前DNS配置预览"
+                description={
+                  <div style={{ fontSize: '12px' }}>
+                    <div><strong>策略:</strong> {workloadConfig.spec.dnsConfig.policy}</div>
+                    {workloadConfig.spec.dnsConfig.nameservers && workloadConfig.spec.dnsConfig.nameservers.length > 0 && (
+                      <div><strong>DNS服务器:</strong> {workloadConfig.spec.dnsConfig.nameservers.filter(s => s.trim()).join(', ')}</div>
+                    )}
+                    {workloadConfig.spec.dnsConfig.searches && workloadConfig.spec.dnsConfig.searches.length > 0 && (
+                      <div><strong>搜索域:</strong> {workloadConfig.spec.dnsConfig.searches.filter(s => s.trim()).join(', ')}</div>
+                    )}
+                  </div>
+                }
+                type="success"
+                style={{ marginTop: 12 }}
+              />
+            ) : null}
+          </>
+        )}
+      </Card>
+
       {/* 镜像仓库配置 */}
       <Card title="🐳 镜像仓库配置" size="small" style={{ marginBottom: 16 }}>
         <Form.Item>
@@ -1944,6 +2318,80 @@ const WorkloadWizardModal: React.FC<WorkloadWizardModalProps> = ({
             ))}
           </div>
         </Card>
+
+        {/* DNS配置预览 */}
+        {workloadConfig.spec.dnsConfig?.enabled && (
+          <Card 
+            title={
+              <Space>
+                <span style={{ fontSize: '16px' }}>🌐</span>
+                <Text strong>DNS 配置</Text>
+                <Tag color={
+                  workloadConfig.spec.dnsConfig.policy === 'ClusterFirst' ? 'blue' :
+                  workloadConfig.spec.dnsConfig.policy === 'Default' ? 'orange' :
+                  workloadConfig.spec.dnsConfig.policy === 'None' ? 'red' : 'purple'
+                }>
+                  {workloadConfig.spec.dnsConfig.policy}
+                </Tag>
+              </Space>
+            }
+            size="small" 
+            style={{ marginBottom: 12, flexShrink: 0 }}
+          >
+            <Row gutter={16}>
+              <Col span={6}>
+                <Text type="secondary">DNS策略:</Text>
+                <div style={{ marginTop: 4 }}>
+                  <Text strong style={{ color: '#1890ff' }}>{workloadConfig.spec.dnsConfig.policy}</Text>
+                </div>
+              </Col>
+              <Col span={6}>
+                <Text type="secondary">DNS服务器:</Text>
+                <div style={{ marginTop: 4 }}>
+                  {(workloadConfig.spec.dnsConfig?.nameservers?.length || 0) > 0 ? (
+                    <Text code style={{ fontSize: '12px' }}>
+                      {workloadConfig.spec.dnsConfig.nameservers!.filter(s => s.trim()).join(', ')}
+                    </Text>
+                  ) : (
+                    <Text type="secondary">默认</Text>
+                  )}
+                </div>
+              </Col>
+              <Col span={6}>
+                <Text type="secondary">搜索域:</Text>
+                <div style={{ marginTop: 4 }}>
+                  {(workloadConfig.spec.dnsConfig?.searches?.length || 0) > 0 ? (
+                    <Text code style={{ fontSize: '12px' }}>
+                      {workloadConfig.spec.dnsConfig.searches!.filter(s => s.trim()).join(', ')}
+                    </Text>
+                  ) : (
+                    <Text type="secondary">默认</Text>
+                  )}
+                </div>
+              </Col>
+              <Col span={6}>
+                <Text type="secondary">状态:</Text>
+                <div style={{ marginTop: 4 }}>
+                  <Text strong style={{ color: '#52c41a' }}>✅ 已配置</Text>
+                </div>
+              </Col>
+            </Row>
+            {workloadConfig.spec.dnsConfig.policy === 'Default' && (
+              <Alert
+                message="💡 使用主机DNS配置，可以解决大部分外部域名解析问题"
+                type="success"
+                style={{ marginTop: 8, fontSize: '12px' }}
+              />
+            )}
+            {workloadConfig.spec.dnsConfig.policy === 'None' && !workloadConfig.spec.dnsConfig.nameservers?.length && (
+              <Alert
+                message="⚠️ 使用None策略但未配置DNS服务器，可能导致域名解析失败"
+                type="warning"
+                style={{ marginTop: 8, fontSize: '12px' }}
+              />
+            )}
+          </Card>
+        )}
 
         {/* YAML配置 */}
         <Card 

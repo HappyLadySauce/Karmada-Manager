@@ -34,6 +34,8 @@ const replacePathPrefixPlugin = (): Plugin => {
   };
 };
 
+
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const license = getLicense();
@@ -41,11 +43,48 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
     base: process.env.NODE_ENV === 'development' ? '' : '/static',
+
+    build: {
+      sourcemap: false, // 关闭source map生成避免警告
+      rollupOptions: {
+        onwarn(warning, warn) {
+          // 忽略所有常见的警告
+          const ignoredWarnings = [
+            'SOURCEMAP_ERROR',
+            'CIRCULAR_DEPENDENCY', 
+            'THIS_IS_UNDEFINED',
+            'EVAL',
+            'PLUGIN_WARNING'
+          ];
+          
+          if (ignoredWarnings.includes(warning.code || '')) {
+            return;
+          }
+          
+          // 忽略node_modules中的警告
+          if (warning.message && warning.message.includes('node_modules')) {
+            return;
+          }
+          
+          // 忽略source map相关的所有警告
+          if (warning.message && (
+            warning.message.includes('source map') ||
+            warning.message.includes('sourcemap') ||
+            warning.message.includes('.map')
+          )) {
+            return;
+          }
+          
+          warn(warning);
+        }
+      }
+    },
     plugins: [
       banner(license) as Plugin,
       react(),
       svgr(),
       replacePathPrefixPlugin(),
+
       dynamicBase({
         publicPath: 'window.__dynamic_base__',
         transformIndexHtml: true,
@@ -66,5 +105,7 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+
   };
 });
+

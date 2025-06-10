@@ -34,6 +34,7 @@ import {
   Progress,
   Divider
 } from 'antd';
+import { useLoading } from '@/components/loading';
 import { 
   ClusterOutlined, 
   DatabaseOutlined, 
@@ -50,7 +51,7 @@ import {
   FolderOpenOutlined,
   InfoCircleOutlined,
   CloudServerOutlined,
-  HddOutlined
+
 } from '@ant-design/icons';
 import '@/styles/tech-theme.css';
 import ScrollContainer from '@/components/common/ScrollContainer';
@@ -210,8 +211,25 @@ const ClusterSchedulingPage: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [podDetailVisible, setPodDetailVisible] = useState(false);
   const [selectedPod, setSelectedPod] = useState<any>(null);
+  const [resourceTypeFilter, setResourceTypeFilter] = useState('all'); // 新增：资源类型过滤器
+  const { showLoading, hideLoading } = useLoading();
 
-  // 加载数据
+  // 加载数据（带简单加载提示）
+  const loadDataWithCustomLoading = async () => {
+    showLoading({
+      message: '正在刷新数据',
+      description: '请稍候...',
+      showProgress: false
+    });
+    
+    // 实际的数据加载
+    await loadData();
+    
+    // 加载完成后隐藏提示
+    hideLoading();
+  };
+
+  // 原始加载数据方法
   const loadData = async () => {
     setLoading(true);
     try {
@@ -220,13 +238,13 @@ const ClusterSchedulingPage: React.FC = () => {
       ]);
       setOverview(overviewData.data);
       
-      // 从概览数据中获取所有命名空间，然后加载工作负载数据
+      // 从概览数据中获取所有命名空间，然后加载调度资源数据
       const namespaces = overviewData.data?.namespaceStats?.map(ns => ns.namespace) || ['default'];
       
       // 尝试从多个命名空间加载数据
       const workloadPromises = namespaces.map(namespace => 
         GetNamespaceWorkloadsScheduling({ namespace }).catch(err => {
-          console.warn(`Failed to load workloads for namespace ${namespace}:`, err);
+          console.warn(`Failed to load resources for namespace ${namespace}:`, err);
           return { data: { data: [] } };
         })
       );
@@ -242,7 +260,7 @@ const ClusterSchedulingPage: React.FC = () => {
           const defaultWorkloadData = await GetNamespaceWorkloadsScheduling({ namespace: 'default' });
           setWorkloads(defaultWorkloadData.data?.data || []);
         } catch (err) {
-          console.warn('Failed to load default namespace workloads:', err);
+          console.warn('Failed to load default namespace resources:', err);
         }
       }
     } catch (error) {
@@ -252,7 +270,7 @@ const ClusterSchedulingPage: React.FC = () => {
     }
   };
 
-  // 加载工作负载详情
+  // 加载调度资源详情
   const loadWorkloadDetail = async (namespace: string, name: string, kind: string) => {
     try {
       const detailData = await GetPreciseSchedulingInfo({ 
@@ -263,7 +281,7 @@ const ClusterSchedulingPage: React.FC = () => {
       setSelectedWorkload(detailData.data);
       setActiveTab('detail');
     } catch (error) {
-      console.error('Failed to load workload detail:', error);
+      console.error('Failed to load resource detail:', error);
     }
   };
 
@@ -300,33 +318,152 @@ const ClusterSchedulingPage: React.FC = () => {
     loadData();
   }, []);
 
-  // 工作负载列表表格列
-  const workloadColumns: ColumnsType<WorkloadSchedulingView> = [
+  // 获取资源类型分类
+  const getResourceCategory = (kind: string) => {
+    const workloadTypes = ['Deployment', 'StatefulSet', 'DaemonSet', 'Job', 'CronJob', 'ReplicaSet', 'Pod'];
+    const serviceTypes = ['Service', 'Ingress', 'EndpointSlice'];
+    const configTypes = ['ConfigMap', 'Secret', 'PersistentVolumeClaim'];
+    
+    if (workloadTypes.includes(kind)) return '工作负载';
+    if (serviceTypes.includes(kind)) return '服务';
+    if (configTypes.includes(kind)) return '配置';
+    return '其他';
+  };
+
+  // 获取资源类型图标
+  const getResourceIcon = (kind: string) => {
+    const category = getResourceCategory(kind);
+    switch (category) {
+      case '工作负载': return <ContainerOutlined style={{ color: 'var(--tech-primary)' }} />;
+      case '服务': return <CloudServerOutlined style={{ color: 'var(--success-color)' }} />;
+      case '配置': return <DatabaseOutlined style={{ color: 'var(--warning-color)' }} />;
+      default: return <AppstoreOutlined style={{ color: 'var(--text-color)' }} />;
+    }
+  };
+
+  // 获取资源类型颜色
+  const getResourceCategoryColor = (kind: string) => {
+    const category = getResourceCategory(kind);
+    switch (category) {
+      case '工作负载': return 'blue';
+      case '服务': return 'green';
+      case '配置': return 'orange';
+      default: return 'default';
+    }
+  };
+
+  // 过滤数据源
+  const filteredWorkloads = React.useMemo(() => {
+    if (resourceTypeFilter === 'all') return workloads;
+    return workloads.filter(workload => {
+      const category = getResourceCategory(workload.workloadInfo.kind);
+      return category === resourceTypeFilter;
+    });
+  }, [workloads, resourceTypeFilter]);
+
+  // 获取资源类型统计
+  const getResourceTypeStats = () => {
+    const stats = {
+      all: workloads.length,
+      工作负载: 0,
+      服务: 0,
+      配置: 0,
+      其他: 0
+    };
+    
+    workloads.forEach(workload => {
+      const category = getResourceCategory(workload.workloadInfo.kind);
+      if (category in stats) {
+        (stats as any)[category]++;
+      }
+    });
+    
+    return stats;
+  };
+
+  // 调度资源列表表格列 - 根据资源类型动态生成
+  const getWorkloadColumns = (): ColumnsType<WorkloadSchedulingView> => {
+    const baseColumns: ColumnsType<WorkloadSchedulingView> = [
     {
-      title: '工作负载',
+      title: '调度资源',
       dataIndex: ['workloadInfo', 'name'],
       key: 'name',
-      render: (name: string, record: WorkloadSchedulingView) => (
+      render: (name: string, record: WorkloadSchedulingView) => {
+        const category = getResourceCategory(record.workloadInfo.kind);
+        return (
         <Space>
-          <ContainerOutlined />
+            {getResourceIcon(record.workloadInfo.kind)}
           <div>
             <Typography.Text strong>{name}</Typography.Text>
             <br />
+              <Space size="small">
             <Typography.Text type="secondary">{record.workloadInfo.kind}</Typography.Text>
+                <Tag color={getResourceCategoryColor(record.workloadInfo.kind)}>
+                  {category}
+                </Tag>
+              </Space>
           </div>
         </Space>
-      ),
+        );
+      },
     },
     {
       title: '命名空间',
       dataIndex: ['workloadInfo', 'namespace'],
       key: 'namespace',
       render: (namespace: string) => <Tag color="blue">{namespace}</Tag>,
-    },
-    {
+    }];
+
+    // 根据资源类型添加特定列
+    if (resourceTypeFilter === 'all') {
+      // 在全部视图中，添加统一的资源类型列
+      baseColumns.push({
+        title: '资源类型',
+        key: 'resourceType',
+        render: (_, record: WorkloadSchedulingView) => {
+          const category = getResourceCategory(record.workloadInfo.kind);
+          const kind = record.workloadInfo.kind;
+          
+          // 根据资源类型显示相应信息
+          switch (category) {
+            case '工作负载':
+              return <Tag color="blue">{kind}</Tag>;
+            case '服务':
+              switch (kind) {
+                case 'Service':
+                  return <Tag color="green">Service</Tag>;
+                case 'Ingress':
+                  return <Tag color="cyan">Ingress</Tag>;
+                default:
+                  return <Tag color="green">{kind}</Tag>;
+              }
+            case '配置':
+              switch (kind) {
+                case 'ConfigMap':
+                  return <Tag color="orange">配置映射</Tag>;
+                case 'Secret':
+                  return <Tag color="red">密钥</Tag>;
+                case 'PersistentVolumeClaim':
+                  return <Tag color="purple">存储卷声明</Tag>;
+                default:
+                  return <Tag color="orange">{kind}</Tag>;
+              }
+            default:
+              return <Tag color="default">{kind}</Tag>;
+          }
+        },
+      });
+      
+      // 在全部视图中，添加副本状态列（只对工作负载显示）
+      baseColumns.push({
       title: '副本状态',
       key: 'replicas',
       render: (_, record: WorkloadSchedulingView) => {
+          const category = getResourceCategory(record.workloadInfo.kind);
+          if (category !== '工作负载') {
+            return <Typography.Text type="secondary">-</Typography.Text>;
+          }
+          
         const readyReplicas = record.workloadInfo.readyReplicas || 0;
         const totalReplicas = record.workloadInfo.replicas || 0;
         
@@ -336,7 +473,60 @@ const ClusterSchedulingPage: React.FC = () => {
           </Typography.Text>
         );
       },
-    },
+      });
+    } else if (resourceTypeFilter === '工作负载') {
+      baseColumns.push({
+        title: '副本状态',
+        key: 'replicas',
+        render: (_, record: WorkloadSchedulingView) => {
+          const readyReplicas = record.workloadInfo.readyReplicas || 0;
+          const totalReplicas = record.workloadInfo.replicas || 0;
+          
+          return (
+            <Typography.Text>
+              {readyReplicas} / {totalReplicas}
+            </Typography.Text>
+          );
+        },
+      });
+    } else if (resourceTypeFilter === '服务') {
+      baseColumns.push({
+        title: '服务类型',
+        key: 'serviceType',
+        render: (_, record: WorkloadSchedulingView) => {
+          const kind = record.workloadInfo.kind;
+          switch (kind) {
+            case 'Service':
+              return <Tag color="green">Service</Tag>;
+            case 'Ingress':
+              return <Tag color="cyan">Ingress</Tag>;
+            default:
+              return <Tag color="green">{kind}</Tag>;
+          }
+        },
+      });
+    } else if (resourceTypeFilter === '配置') {
+      baseColumns.push({
+        title: '配置类型',
+        key: 'configType',
+        render: (_, record: WorkloadSchedulingView) => {
+          const kind = record.workloadInfo.kind;
+          switch (kind) {
+            case 'ConfigMap':
+              return <Tag color="orange">配置映射</Tag>;
+            case 'Secret':
+              return <Tag color="red">密钥</Tag>;
+            case 'PersistentVolumeClaim':
+              return <Tag color="purple">存储卷声明</Tag>;
+            default:
+              return <Tag color="orange">{kind}</Tag>;
+          }
+        },
+      });
+    }
+
+    // 通用列
+    baseColumns.push(
     {
       title: '调度状态',
       key: 'status',
@@ -352,15 +542,21 @@ const ClusterSchedulingPage: React.FC = () => {
     {
       title: '集群分布',
       key: 'clusters',
-      render: (_, record: WorkloadSchedulingView) => (
+        render: (_, record: WorkloadSchedulingView) => {
+          const category = getResourceCategory(record.workloadInfo.kind);
+          return (
         <Space wrap>
           {record.clusterPlacements.map((cluster) => (
             <Tag key={cluster.clusterName} color="green">
-              {cluster.clusterName}: {cluster.actualReplicas}个
+                  {category === '工作负载' 
+                    ? `${cluster.clusterName}: ${cluster.actualReplicas}个`
+                    : `${cluster.clusterName}: 已部署`
+                  }
             </Tag>
           ))}
         </Space>
-      ),
+          );
+        },
     },
     {
       title: '操作',
@@ -383,8 +579,11 @@ const ClusterSchedulingPage: React.FC = () => {
           查看详情
         </Button>
       ),
-    },
-  ];
+      }
+    );
+
+    return baseColumns;
+  };
 
   // 渲染概览统计
   const renderOverview = () => (
@@ -407,7 +606,7 @@ const ClusterSchedulingPage: React.FC = () => {
                 {overview?.totalWorkloads || 0}
               </div>
               <Typography.Text className="text-gray-600 font-semibold uppercase tracking-wide">
-                总工作负载
+                总调度资源
               </Typography.Text>
             </div>
           </div>
@@ -497,7 +696,7 @@ const ClusterSchedulingPage: React.FC = () => {
                         <Badge status={cluster.clusterStatus === 'Ready' ? 'success' : 'error'} />
                         <Typography.Text strong>{cluster.clusterName}</Typography.Text>
                       </Space>
-                      <Typography.Text type="secondary">{cluster.workloadCount} 个工作负载</Typography.Text>
+                                              <Typography.Text type="secondary">{cluster.workloadCount} 个调度资源</Typography.Text>
                     </div>
                     <div style={{ marginTop: 8 }}>
                       <Typography.Text type="secondary">
@@ -536,7 +735,7 @@ const ClusterSchedulingPage: React.FC = () => {
         </Col>
       </Row>
 
-      {/* 集群调度列表 - 工作负载列表 */}
+      {/* 集群调度列表 - 调度资源列表 */}
       <div className="tech-card">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -544,24 +743,77 @@ const ClusterSchedulingPage: React.FC = () => {
               集群调度列表
             </Title>
             <Typography.Text type="secondary">
-              显示工作负载在多集群中的调度情况，包括副本状态和调度详情
+              显示调度资源在多集群中的分布情况，包括工作负载、服务和配置等资源类型
             </Typography.Text>
           </div>
           <NodeIndexOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
         </div>
         <Alert
-          message="工作负载调度分布"
-          description="点击查看详情可查看节点级Pod分布。"
+          message="调度资源分布"
+          description="支持工作负载（Deployment、StatefulSet等）、服务（Service、Ingress）、配置（ConfigMap、Secret）等多种资源类型的调度监控。"
           type="info"
           style={{ marginBottom: 16 }}
         />
+        
+        {/* 资源类型切换按钮 */}
+        <div style={{ marginBottom: 16 }}>
+          <Space wrap>
+            <Typography.Text strong style={{ marginRight: 8 }}>
+              资源类型筛选:
+            </Typography.Text>
+            {(() => {
+              const stats = getResourceTypeStats();
+              const filterOptions = [
+                { key: 'all', label: '全部', count: stats.all, color: 'default' },
+                { key: '工作负载', label: '工作负载', count: stats.工作负载, color: 'blue' },
+                { key: '服务', label: '服务', count: stats.服务, color: 'green' },
+                { key: '配置', label: '配置', count: stats.配置, color: 'orange' },
+              ];
+              
+              return filterOptions.map(option => (
+                <Button
+                  key={option.key}
+                  type={resourceTypeFilter === option.key ? 'primary' : 'default'}
+                  size="small"
+                  onClick={() => setResourceTypeFilter(option.key)}
+                  style={{
+                    borderColor: resourceTypeFilter === option.key ? 'var(--tech-primary)' : undefined,
+                    color: resourceTypeFilter === option.key ? 'white' : 'var(--text-color)',
+                  }}
+                >
+                  <Space size="small">
+                    {option.key === '工作负载' && <ContainerOutlined />}
+                    {option.key === '服务' && <CloudServerOutlined />}
+                    {option.key === '配置' && <DatabaseOutlined />}
+                    {option.key === 'all' && <AppstoreOutlined />}
+                    <span>{option.label}</span>
+                    <Badge 
+                      count={option.count} 
+                      size="small" 
+                      style={{ 
+                        backgroundColor: resourceTypeFilter === option.key ? 'rgba(255,255,255,0.3)' : 'var(--tech-primary)' 
+                      }} 
+                    />
+                  </Space>
+                </Button>
+              ));
+            })()}
+          </Space>
+        </div>
+
         <div className="tech-table">
           <Table
-            columns={workloadColumns}
-            dataSource={workloads}
+            columns={getWorkloadColumns()}
+            dataSource={filteredWorkloads}
             loading={loading}
             rowKey={(record) => `${record.workloadInfo.namespace}-${record.workloadInfo.name}`}
-            pagination={{ pageSize: 10 }}
+            pagination={{ 
+              pageSize: 10,
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total, range) => 
+                `第 ${range[0]}-${range[1]} 条，共 ${total} 个${resourceTypeFilter === 'all' ? '调度资源' : resourceTypeFilter}`
+            }}
           />
         </div>
       </div>
@@ -578,8 +830,8 @@ const ClusterSchedulingPage: React.FC = () => {
       return (
         <div className="tech-card">
           <Alert
-            message="请选择工作负载"
-            description="从拓扑视图中选择一个工作负载来查看详细的调度信息。"
+          message="请选择调度资源"
+          description="从概览列表中选择一个调度资源来查看详细的调度信息。"
             type="info"
           />
         </div>
@@ -599,7 +851,7 @@ const ClusterSchedulingPage: React.FC = () => {
                     🏗️ 集群分布详情
                   </Title>
                   <Typography.Text type="secondary" style={{ marginTop: 4, display: 'block' }}>
-                    树形展示：集群 → 节点 → Pod，直观查看多层级分布
+              树形展示：集群 → 节点 → Pod，直观查看调度资源的多层级分布
                   </Typography.Text>
                   {selectedWorkload.clusterPlacements && (
                     <div style={{ marginTop: 8 }}>
@@ -706,13 +958,13 @@ const ClusterSchedulingPage: React.FC = () => {
           {/* 右侧：工作负载详情和传播策略 */}
           <Col xs={24} lg={8}>
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
-              {/* 工作负载基本信息 */}
+              {/* 调度资源基本信息 */}
               <div className="tech-card">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
                     <RocketOutlined style={{ color: 'var(--tech-primary)', fontSize: '18px' }} />
                     <Title level={5} style={{ margin: 0, color: 'var(--text-color)' }}>
-                      工作负载详情
+                      调度资源详情
                     </Title>
                   </div>
                 </div>
@@ -1120,7 +1372,7 @@ const ClusterSchedulingPage: React.FC = () => {
             </Title>
             <List
               dataSource={mockEvents}
-              renderItem={(event, index) => (
+              renderItem={(event) => (
                 <List.Item>
                   <div className="w-full">
                     <div className="flex justify-between items-start">
@@ -1214,7 +1466,7 @@ const ClusterSchedulingPage: React.FC = () => {
               🏗️ CLUSTER SCHEDULING
             </Title>
             <Typography.Text className="text-gray-600 text-lg">
-              Karmada多集群工作负载调度监控中心
+              Karmada多集群调度资源监控中心
             </Typography.Text>
           </div>
 
@@ -1231,7 +1483,7 @@ const ClusterSchedulingPage: React.FC = () => {
               </div>
                           <Button 
               icon={<ReloadOutlined />}
-              onClick={loadData}
+              onClick={loadDataWithCustomLoading}
               loading={loading}
               style={{
                 borderColor: 'var(--tech-primary)',
