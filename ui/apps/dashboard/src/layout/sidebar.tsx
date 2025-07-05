@@ -23,7 +23,7 @@ import {
   filterMenuItems,
 } from '@/routes/route.tsx';
 import { useMatches, useNavigate } from 'react-router-dom';
-import { FC, useMemo } from 'react';
+import { FC, useMemo, useState, useEffect } from 'react';
 import _ from 'lodash';
 import { getSidebarWidth } from '@/utils/i18n';
 import { cn } from '@/utils/cn.ts';
@@ -36,18 +36,43 @@ interface SidebarProps {
 
 const Sidebar: FC<SidebarProps> = ({ collapsed }) => {
   const navigate = useNavigate();
+  const matches = useMatches();
+
+  // 添加状态管理来控制菜单展开状态
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
+
   const onClick: MenuProps['onClick'] = (e) => {
     const url = flattenRoutes[e.key];
-    if (!url) return;
-    navigate(url);
+    if (url) {
+      navigate(url);
+      return;
+    }
+
+    // 如果没有找到直接URL，检查是否为父级菜单项
+    // 为父级菜单项提供默认导航
+    const parentMenuDefaults: Record<string, string> = {
+      'MULTICLOUD-RESOURCE-MANAGE': '/multicloud-resource-manage/namespace',
+      'MULTICLOUD-POLICY-MANAGE':
+        '/multicloud-policy-manage/propagation-policy',
+      'CLUSTER-MANAGE': '/cluster-manage',
+      'BASIC-CONFIG': '/basic-config/oem',
+      'ADVANCED-CONFIG': '/advanced-config/failover',
+      ADDON: '/addon/buildin',
+    };
+
+    const defaultUrl = parentMenuDefaults[e.key];
+    if (defaultUrl) {
+      navigate(defaultUrl);
+    }
   };
-  const matches = useMatches();
+
   const selectKeys = useMemo(() => {
     if (!matches) return [];
     return matches
       .filter((m) => !_.isUndefined(m.handle))
       .map((m) => (m.handle as IRouteObjectHandle).sidebarKey);
   }, [matches]);
+
   const { data } = useQuery({
     queryKey: ['GetDashboardConfig'],
     queryFn: async () => {
@@ -60,6 +85,7 @@ const Sidebar: FC<SidebarProps> = ({ collapsed }) => {
       }
     },
   });
+
   const filteredMenuItems = useMemo(() => {
     // 如果没有配置数据或者menu_configs为空，显示所有菜单项
     if (!data || !data.menu_configs || data.menu_configs.length === 0) {
@@ -74,47 +100,57 @@ const Sidebar: FC<SidebarProps> = ({ collapsed }) => {
   }, [data, menuItems]);
 
   // 计算应该展开的菜单项
-  const openKeys = useMemo(() => {
+  const defaultOpenKeys = useMemo(() => {
     if (selectKeys.length > 0) {
       const currentPath = matches[matches.length - 1]?.pathname;
-      
+
       // 如果当前路径包含 cluster-manage，展开集群管理菜单
       if (currentPath?.includes('/cluster-manage')) {
         return ['CLUSTER-MANAGE'];
       }
-      
+
       // 如果当前路径包含 multicloud-resource-manage，展开多云资源管理菜单
       if (currentPath?.includes('/multicloud-resource-manage')) {
         return ['MULTICLOUD-RESOURCE-MANAGE'];
       }
-      
+
       // 如果当前路径包含 multicloud-policy-manage，展开多云策略管理菜单
       if (currentPath?.includes('/multicloud-policy-manage')) {
         return ['MULTICLOUD-POLICY-MANAGE'];
       }
-      
+
       // 如果当前路径包含 basic-config，展开基础配置菜单
       if (currentPath?.includes('/basic-config')) {
         return ['BASIC-CONFIG'];
       }
-      
+
       // 如果当前路径包含 advanced-config，展开高级配置菜单
       if (currentPath?.includes('/advanced-config')) {
         return ['ADVANCED-CONFIG'];
       }
-      
+
       // 如果当前路径包含 addon，展开插件管理菜单
       if (currentPath?.includes('/addon')) {
         return ['ADDON'];
       }
-      
+
       // 默认情况
       return [selectKeys[0]];
     }
-    
+
     // 默认展开的菜单项
     return ['MULTICLOUD-RESOURCE-MANAGE', 'MULTICLOUD-POLICY-MANAGE'];
   }, [selectKeys, matches]);
+
+  // 同步默认展开状态
+  useEffect(() => {
+    setOpenKeys(defaultOpenKeys);
+  }, [defaultOpenKeys]);
+
+  const handleOpenChange = (keys: string[]) => {
+    setOpenKeys(keys);
+  };
+
   return (
     <div className={cn('w-full', 'h-full', 'overflow-y-auto')}>
       <Menu
@@ -122,9 +158,7 @@ const Sidebar: FC<SidebarProps> = ({ collapsed }) => {
         style={{ width: collapsed ? '80px' : getSidebarWidth() }}
         selectedKeys={selectKeys}
         openKeys={openKeys}
-        onOpenChange={(keys) => {
-          // 这里可以添加状态管理来控制菜单展开状态，暂时保持简单
-        }}
+        onOpenChange={handleOpenChange}
         mode="inline"
         items={filteredMenuItems}
       />
