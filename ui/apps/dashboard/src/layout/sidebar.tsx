@@ -72,17 +72,59 @@ const Sidebar: FC<SidebarProps> = ({ collapsed }) => {
     }
     return filterMenuItems(menuItems, menuInfo);
   }, [data, menuItems]);
+
+  // 计算应该展开的菜单项
+  const openKeys = useMemo(() => {
+    if (selectKeys.length > 0) {
+      const currentPath = matches[matches.length - 1]?.pathname;
+      
+      // 如果当前路径包含 cluster-manage，展开集群管理菜单
+      if (currentPath?.includes('/cluster-manage')) {
+        return ['CLUSTER-MANAGE'];
+      }
+      
+      // 如果当前路径包含 multicloud-resource-manage，展开多云资源管理菜单
+      if (currentPath?.includes('/multicloud-resource-manage')) {
+        return ['MULTICLOUD-RESOURCE-MANAGE'];
+      }
+      
+      // 如果当前路径包含 multicloud-policy-manage，展开多云策略管理菜单
+      if (currentPath?.includes('/multicloud-policy-manage')) {
+        return ['MULTICLOUD-POLICY-MANAGE'];
+      }
+      
+      // 如果当前路径包含 basic-config，展开基础配置菜单
+      if (currentPath?.includes('/basic-config')) {
+        return ['BASIC-CONFIG'];
+      }
+      
+      // 如果当前路径包含 advanced-config，展开高级配置菜单
+      if (currentPath?.includes('/advanced-config')) {
+        return ['ADVANCED-CONFIG'];
+      }
+      
+      // 如果当前路径包含 addon，展开插件管理菜单
+      if (currentPath?.includes('/addon')) {
+        return ['ADDON'];
+      }
+      
+      // 默认情况
+      return [selectKeys[0]];
+    }
+    
+    // 默认展开的菜单项
+    return ['MULTICLOUD-RESOURCE-MANAGE', 'MULTICLOUD-POLICY-MANAGE'];
+  }, [selectKeys, matches]);
   return (
     <div className={cn('w-full', 'h-full', 'overflow-y-auto')}>
       <Menu
         onClick={onClick}
         style={{ width: collapsed ? '80px' : getSidebarWidth() }}
         selectedKeys={selectKeys}
-        defaultOpenKeys={
-          selectKeys.length > 0
-            ? [selectKeys[0]]
-            : ['MULTICLOUD-RESOURCE-MANAGE', 'MULTICLOUD-POLICY-MANAGE']
-        }
+        openKeys={openKeys}
+        onOpenChange={(keys) => {
+          // 这里可以添加状态管理来控制菜单展开状态，暂时保持简单
+        }}
         mode="inline"
         items={filteredMenuItems}
       />

@@ -468,18 +468,6 @@ const ClusterDetailPage = () => {
                 >
                   节点详情
                 </Button>
-                <Button 
-                  className={activeTab === 'monitoring' ? 'tech-btn-primary' : ''}
-                  style={activeTab !== 'monitoring' ? { 
-                    borderColor: 'var(--tech-primary)', 
-                    color: 'var(--tech-primary)',
-                    background: 'transparent'
-                  } : {}}
-                  icon={<MonitorOutlined />}
-                  onClick={() => setActiveTab('monitoring')}
-                >
-                  监控信息
-                </Button>
               </Space>
               <div className="mt-4">
                 <Tag color="blue" className="tech-tag">
@@ -961,22 +949,7 @@ const ClusterDetailPage = () => {
               </div>
             )}
 
-            {activeTab === 'monitoring' && (
-              <div>
-                <Row gutter={[16, 16]}>
-                  <Col span={12}>
-                    <Card title="集群健康状态" size="small" className="tech-card">
-                      <Empty description="监控数据暂未接入" />
-                    </Card>
-                  </Col>
-                  <Col span={12}>
-                    <Card title="资源趋势" size="small" className="tech-card">
-                      <Empty description="趋势图表暂未实现" />
-                    </Card>
-                  </Col>
-                </Row>
-              </div>
-            )}
+
           </Card>
         </div>
       </div>
